@@ -1,0 +1,18 @@
+#!/bin/bash
+
+# Firefox Profil zurücksetzen
+rm -Rf /home/demo/.mozilla
+tar -xf /home/shared/profiles/mozilla.tar.bz2 -C /home/demo/
+
+# SSH Autorization aufsetzen
+cp /home/shared/ssh/* /home/demo/.ssh/
+ 
+# Disable screen lock and blank screen
+gsettings set org.gnome.desktop.screensaver lock-enabled false
+gsettings set org.gnome.desktop.session idle-delay 0
+
+# Fernsteuerung freischalten
+# gsettings set org.gnome.Vino enabled true
+# gsettings set org.gnome.Vino view-only false
+# gsettings set org.gnome.Vino prompt-enabled false
+

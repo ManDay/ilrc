@@ -1,0 +1,39 @@
+#!/bin/bash
+
+#	./pptviewer <file> [<monitor>]
+#
+# monitor:
+#  Monitor to run on
+#
+# file:
+#  File to show
+##
+
+# Multiple monitor aware programs
+
+MONITOR="$2"
+FILE="$1"
+
+evince "$FILE" &
+PID=$!
+
+trap "kill $PID" INT TERM
+
+maxwait=30
+s=0
+while (( s<maxwait )) && ! parent=$(xdotool search --all --onlyvisible --pid $PID --name '')
+do
+	echo "Waiting for Evince Window"
+	sleep 1
+	s=$(( s + 1 ))
+done
+
+xdotool windowmove $parent $(getoo "$MONITOR")
+xdotool windowfocus --sync $parent
+xdotool key F5
+
+while kill -0 $PID
+do
+	sleep 30
+	xdotool windowactivate $parent
+done

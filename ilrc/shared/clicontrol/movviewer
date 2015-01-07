@@ -1,0 +1,41 @@
+#!/bin/bash
+
+#	./movviewer <file> [<monitor>]
+#
+# monitor:
+#  Monitor to run on
+#
+# file:
+#  File to show
+##
+
+# Multiple monitor aware programs
+
+MONITOR="$2"
+FILE="$1"
+
+dconf write /org/gnome/Totem/repeat true
+
+totem "$FILE" &
+PID=$!
+
+trap "kill $PID" INT TERM
+
+maxwait=30
+s=0
+while (( s<maxwait )) && ! parent=$(xdotool search --all --onlyvisible --pid $PID --name '')
+do
+	echo "Waiting for Totem Window"
+	sleep 1
+	s=$(( s + 1 ))
+done
+
+xdotool windowmove $parent $(getoo "$MONITOR")
+xdotool windowfocus --sync $parent
+xdotool key F11
+
+while kill -0 $PID
+do
+	sleep 30
+	xdotool windowactivate $parent
+done

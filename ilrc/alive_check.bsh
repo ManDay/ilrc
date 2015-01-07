@@ -1,0 +1,38 @@
+#!/bin/bash
+
+## ALIVE CHECK
+#
+# . <host> [<pingtimeout=4> [<sshtimeout=pingtimeout>]]
+#
+# Returns whether the <host> is pingable within <pingtimeout> seconds
+# and SSHable within <sshtimeout> seconds. Returns 0 if both, 1 if
+# neither and 2 if only pingable.
+##
+
+TARGET=$1
+
+if (( $# > 1 ))
+then
+	PINGTIMEOUT=$2
+	if (( $# > 2 ))
+	then
+		SSHTIMEOUT=$3
+	else
+		SSHTIMEOUT=$PINGTIMEOUT
+	fi
+else
+	PINGTIMEOUT=4
+	SSHTIMEOUT=4
+fi
+
+if ! ping -c1 -W$PINGTIMEOUT "$TARGET" 2>/dev/null | grep -q '1 received'
+then
+	exit 1
+else
+	if ! ./ssh.bsh "$TARGET" "exit" "$SSHTIMEOUT"
+	then
+		exit 2
+	fi
+fi
+
+exit 0

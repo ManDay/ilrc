@@ -1,0 +1,30 @@
+#!/bin/bash
+
+# ./freeze <mouse> <keyboard>
+#
+# mouse:
+#  1 - Freeze mouse
+#  0 - Unfreeze mouse
+#
+# keyboard:
+#  1 - Freeze keyboard
+#  0 - Unfreeze keyboard
+##
+
+greps=("slave  pointer" "slave  keyboard")
+
+for i in {0..1}
+do
+	arg=$((i + 1))
+	while read -r id
+	do
+		if [[ "${!arg}" == "1" ]]
+		then
+			echo "Disabling ${greps[$i]} #$id"
+			xinput disable "$id"
+		else
+			echo "Enabling ${greps[$i]} #$id"
+			xinput enable "$id"
+		fi
+	done < <(xinput list --short | grep "${greps[$i]}" | grep -o 'id=[[:digit:]]*' | grep -o '[[:digit:]]*')
+done

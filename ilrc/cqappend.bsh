@@ -1,0 +1,109 @@
+#!/bin/bash
+
+TARGET="$1"
+
+## DISPATCHER
+#
+# . <host>
+#
+# Dispatches commands in sequential order to a remote <host>, as soon as
+# the host is able to receive them.  The command queue which will be
+# dispatched is expected to be in file
+
+QUEUE_FILE="bootsequences/$TARGET"
+
+# The file should contain commands which will be executed on the remote host by
+# SSH. When there are no more lines in the queue, the dispatcher waits until
+# new lines are added.
+# When started, the dispatcher will make sure only one instance of itsself is
+# running for that particular host by negotiating a working process through file
+
+PID_FILE="bootsequences/dispatch_$TARGET"
+
+# If a command in the file begins with "&", it will be dispatched blindly
+# without checking for succces. If a command in the file begins with a "#", it
+# will not be redispatched.
+#
+# BEWARE: Dispatching commands which terminate the connection without "&" to
+# SSH will be redispatched until the number of maximum tries has been reached.
+# The number of maximum trials is
+
+MAXIMUM_TRIALS=50
+
+##
+
+# Make sure there is no dispatcher running, yet
+# The second condition asserts that when we relooped, because no
+# proces with the filed PID was found running, we will not keep
+# relooping because of an orphaned PID file
+
+while [[ -f $PID_FILE && "$(cat $PID_FILE)" != $PID ]]
+do
+	echo "Found PID file, not yet found to be orphaned"
+	PID=$(cat $PID_FILE)
+
+	# Check again one second later, because the running dispatcher might already
+	# have decided to terminate before the queue was written.
+	sleep 1
+
+	if ps -p $PID > /dev/null
+	then
+		echo "Referenced PID still active, quit"
+		exit 1
+	fi
+done
+
+umask 0002
+
+echo "Trying to aquire lock"
+echo "$$" > $PID_FILE
+
+sleep 1
+
+if [[ ! "$(cat "$PID_FILE")" == "$$" ]]
+then
+	echo "Different process got lock, quit"
+	exit 1
+fi
+
+echo "Aquired PID Lock"
+
+# Dispatch queued commands. For that, fetch all the commands currently in the
+# queue by moving them to somewhere else, parse them. Then start over.
+
+TMP_FILE=$(mktemp)
+
+while mv "$QUEUE_FILE" "$TMP_FILE" 2>/dev/null
+do
+	echo "Queue fetched"
+	while read -r LINE
+	do
+		echo "Read line '$LINE'"
+		if [[ "$LINE" == '#'* ]]
+		then
+			LINE=${LINE#'#'}
+			MAX_TRIALS=1
+		else
+			MAX_TRIALS="${MAXIMUM_TRIALS}"
+		fi
+
+		AGAIN=1
+		TRIALS=0
+		while (( AGAIN && TRIALS < MAX_TRIALS ))
+		do
+			echo "Trying to dispatch '$LINE'"
+			# Redirect from /dev/null sto ssh doesn't eat our stdin!
+			./ssh.bsh "$TARGET" "$LINE" < /dev/null
+
+			AGAIN=$(( $? == 255 ))
+			if (( $AGAIN ))
+			then
+				sleep 2
+				TRIALS=$(( TRIALS + 1 ))
+			fi
+		done
+	done < "$TMP_FILE"
+done
+
+rm "$TMP_FILE"
+rm $PID_FILE

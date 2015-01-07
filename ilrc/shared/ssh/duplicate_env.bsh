@@ -1,0 +1,54 @@
+#!/bin/bash
+
+# Maximum time to wait until a gnome session of that user is available
+MAXWAIT=10
+
+NAME='gnome-session'
+USER_ID=$(id -u)
+
+i=0
+
+while true
+do
+
+	GNOME_SESSION_PID=$(ps U $USER_ID -o'pid:1= comm:1=' | grep "$NAME" | cut -d' ' -f1)
+	if (( $? == 0 ))
+	then
+		break
+	fi
+
+	sleep 1
+
+	i=$(( i + 1 ))
+
+	if (( i > MAXWAIT ))
+	then
+		exit 1
+	fi
+done
+
+while read -r -d $'\0' VARPAIR
+do
+	export "$VARPAIR"
+done <"/proc/$GNOME_SESSION_PID/environ"
+
+export PATH="$PATH:/home/shared/clicontrol"
+
+if [[ "$SSH_ORIGINAL_COMMAND" ]]
+then
+	if [[ "${SSH_ORIGINAL_COMMAND:0:1}" == ";" ]]
+	then
+		SSH_ORIGINAL_COMMAND=${SSH_ORIGINAL_COMMAND:1}
+
+		read -r
+	fi
+
+	if [[ "${SSH_ORIGINAL_COMMAND:0:1}" == "&" ]]
+	then
+		bash -c "${SSH_ORIGINAL_COMMAND:1}" < /dev/null &> /dev/null &
+	else
+		bash -c "$SSH_ORIGINAL_COMMAND"
+	fi
+else
+	bash
+fi

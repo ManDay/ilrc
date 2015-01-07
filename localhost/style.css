@@ -1,0 +1,117 @@
+body {
+	background-color: white;
+}
+
+form {
+	display: table;
+	margin: auto;
+	padding: 0px;
+}
+
+div.row {
+	margin: 0px;
+}
+
+div#main, div#footer {
+	background-color: #EFEFEF;
+	border: 1px solid black;
+}
+
+div#footer {
+	border-top-style: none;
+}
+
+td.state {
+	font-weight: bold;
+	text-align: center;
+}
+
+div#main table {
+	width: 100%;
+}
+
+div#profile {
+	display: table;
+	width: 100%;
+}
+
+div#profile p {
+	display: table-cell;
+	padding: 1em 0px;
+}
+
+#buttonstopleft {
+	text-align: left;
+}
+
+#buttonstopright {
+	text-align: right;
+}
+
+#buttonscenter {
+	text-align: center;
+}
+
+div#footer img {
+	width: 1100px;
+	display: block;
+}
+
+ul {
+	display: block;
+	float: right;
+	margin: 0px;
+	margin-right: 0.5em;
+}
+
+li {
+	display: inline-block;
+	font-size: 75%;
+}
+
+li a {
+	color: black;
+}
+
+li a::after {
+	content: "...";
+}
+
+h1 {
+	font-family: sans-serif;
+	margin: 0.4em 2em 0em 2em;
+	font-size: 44px;
+	font-weight: bold;
+	color: #0080ff;
+}
+
+h1 span {
+	font-size: 14px;
+	color: #ff00be;
+}
+
+h3 {
+	margin-left: 1em;
+}
+
+td, th {
+	white-space: nowrap;
+}
+
+th {
+	text-align: left;
+}
+
+th.longcell {
+	text-align: center;
+}
+
+button img {
+	max-width: 16px;
+	max-height: 16px;
+	min-width: 16px;
+}
+
+td.data, input.hostinput {
+	font-family: monospace;
+}

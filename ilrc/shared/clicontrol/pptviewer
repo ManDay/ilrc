@@ -1,0 +1,70 @@
+#!/bin/bash
+
+#	./pptviewer <file> [<monitor>]
+#
+# monitor:
+#  Monitor to run on
+#
+# file:
+#  File to show
+##
+
+# Multiple monitor aware programs
+
+MONITOR="$2"
+file="$1"
+
+if [[ "$MONITOR" == "0" ]]
+then
+	targetmon="2"
+elif [[ "$MONITOR" == "1" ]]
+then
+	targetmon="1"
+fi
+
+ufileident=${file##*/}
+ufilename="/tmp/$ufileident"
+rm "/tmp/.~lock.$ufileident#"
+
+cp "$file" "$ufilename"
+
+configdir="$HOME/.config/libreoffice/monitor_$targetmon";
+
+if [[ ! -d "$configdir" ]]
+then
+	rm -r "$configdir"
+	mkdir "$configdir"
+fi
+
+tar xf "/home/shared/profiles/libreoffice.tar.bz2" -C "$configdir"
+configfile="$configdir/user/registrymodifications.xcu"
+
+echo "Setting display to monitor $targetmon (monitor 0 is 2, monitor 1 is 1)"
+sed -i "/Display/ s/<value>[[:digit:]]*/<value>$targetmon/" "$configfile"
+
+soffice "-env:UserInstallation=file://$configdir/" --nologo --nolockcheck --show --norestore "$ufilename" &
+PID=$!
+
+trap "kill $PID" INT TERM
+
+maxwait=30
+s=0
+while (( s<maxwait )) && ! parent=$(xdotool search --all --onlyvisible --name "$ufileident")
+do
+	echo "Waiting for Libre-Office Window with title $ufileident"
+
+	sleep 1
+	s=$(( s + 1 ))
+done
+
+echo "Found windows as $parent"
+
+sleep 1
+
+xdotool windowminimize $parent
+
+while kill -0 $PID
+do
+	sleep 30
+	xdotool search --all --onlyvisible --classname 'soffice' windowactivate "%@"
+done

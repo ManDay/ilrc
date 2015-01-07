@@ -1,0 +1,28 @@
+#!/bin/bash
+
+# ./getoo <output>
+#
+# output:
+#  Number of output
+##
+
+TARGET="$1"
+OUTPUTNO=0
+
+while read -r OUTPUT
+do
+	if [[ "$OUTPUTNO" == "$TARGET" ]]
+	then
+		{
+			IFS='+' read -a OFFSET
+			echo "${OFFSET[@]}"
+			exit 0
+		} <<< "$OUTPUT"
+	fi
+
+	OUTPUTNO=$(( OUTPUTNO + 1 ))
+	
+done < <(xrandr | grep -o '[[:digit:]]\+x[[:digit:]]\++[[:digit:]]\++[[:digit:]]\+' | grep -o '[[:digit:]]\++[[:digit:]]\+$')
+
+echo "0 0"
+exit 1

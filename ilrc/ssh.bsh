@@ -1,0 +1,38 @@
+#!/bin/bash
+
+## SSH
+# 
+# . <target> <commmand> [<timeout=5>]
+#
+# Executes <command> on demo host <target> with connection timeout <timeout>.
+# If <command> begins with a "&" it is run in parallel and the script returns
+# immediately, indicating success. If command starts with a ;, it is assumed to
+# be synchronized and the timestamp will make the appropriately configured
+# remote wait until that locally synced timestamp.
+##
+
+if [[ "$3" ]]
+then
+	to="$3"
+else
+	to=5
+fi
+
+COMMAND="$2"
+
+if [[ "${COMMAND:0:1}" == ";" ]]
+then
+	timestamp=$(echo "${COMMAND:1}" | grep -o '^[[:digit:]]*')
+	delaytime=$((timestamp - $(date '+%s')))
+	COMMAND=";${COMMAND#;*;}"
+else
+	delaytime=0
+fi
+
+(
+	if (( delaytime > 0 ))
+	then
+		sleep "$delaytime"
+		echo ""
+	fi
+) | ssh -qi /var/www/ilrc/sshdata/demo_rsa -o ConnectTimeout="$to" -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null "demo@$1" "${COMMAND}"

@@ -1,0 +1,73 @@
+#!/bin/bash
+
+## ALIVE CHECK
+#
+# . [<host 1> ...]
+#
+# Queries the state, pingable or SSH available of all given <host>s and
+# returns the results, one host status per line. The status is either of
+#
+# -      Host is not pingable
+# *<IP>  Host is pingable and SSHable with IP <IP>
+# #<IP>  Host is pingable but not SSHable with IP <IP>
+##
+
+HOSTS="$@"
+TIMEOUT=2
+
+WAITFORS=( )
+
+export IPFILE="$(mktemp)"
+
+pinger( ) {
+	ID=$1
+	TARGET=$2
+
+	./alive_check.bsh "$TARGET" $TIMEOUT
+	ALIVE=$?
+
+	if [[ "$ALIVE" != 1 ]]
+	then	
+		IP=$(dig "$TARGET" | grep -A1 'ANSWER SECTION' | grep -o '[0-9\.]\+$')
+		echo "$ID $IP"
+	fi
+
+	return $ALIVE
+}
+
+# Iterate over all hosts 
+i=0;
+for HOST in $HOSTS
+do
+	pinger $i $HOST >> $IPFILE &
+	WAITLIST+=("$!")
+	i=$((i + 1))
+done
+
+i=0;
+for WAITFOR in ${WAITLIST[@]}
+do
+	wait "$WAITFOR"
+	STATE=$?
+
+	if [[ $STATE != 1 ]]
+	then
+		while read -r IPLINE
+		do
+			if [[ "${IPLINE%% *}" == "$i" ]]
+			then
+				if [[ $STATE == 0 ]]
+				then
+					echo "*${IPLINE##* }"
+				else
+					echo "#${IPLINE##* }"
+				fi
+			fi
+		done <"$IPFILE"
+	else
+		echo "-"
+	fi
+	i=$((i + 1))
+done
+
+rm "$IPFILE"

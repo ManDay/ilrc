@@ -1,0 +1,16 @@
+#!/bin/bash
+
+if dbus-send --print-reply --session --dest=org.gnome.ScreenSaver --type=method_call /org/gnome/ScreenSaver org.gnome.ScreenSaver.GetActive | grep "boolean false" > /dev/null
+then
+	if [[ "$1" == "lock" ]]
+	then
+		dbus-send --session --dest=org.gnome.ScreenSaver --type=method_call /org/gnome/ScreenSaver org.gnome.ScreenSaver.SetActive boolean:true
+	fi
+else
+	if [[ "$1" == "unlock" ]]
+	then
+		dbus-send --session --dest=org.gnome.ScreenSaver --type=method_call /org/gnome/ScreenSaver org.gnome.ScreenSaver.SetActive boolean:false
+		xrandr --output DP1 --off
+		xrandr --output DP1 --auto
+	fi
+fi

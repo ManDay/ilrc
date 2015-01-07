@@ -1,0 +1,51 @@
+#!/bin/bash
+
+# ./present <repetition> <ident> <command> [<args> ...]
+#
+# repetition:
+#  0 - Shut down the computer when terminated while $LOCKFILE still exists
+#  1 - Restart when terminated while $LOCKFILE still exists
+#  2 - Exit when terminated in either case
+#
+# ident:
+#  Identifier by which to lock the command
+#
+# command:
+#  Command to execute
+#
+# args
+#  Arguments to command
+##
+
+REP="$1"
+COMMAND="$3"
+IDENT="$2"
+
+shift 2
+
+LOCKFILE="/tmp/${IDENT}.lock"
+
+echo $$ > "$LOCKFILE"
+trap 'kill $PRESENTER' USR1
+
+while [[ -f "$LOCKFILE" ]]
+do
+	"$@" &
+
+	PRESENTER=$!
+	wait $PRESENTER
+
+	if [[ -f "$LOCKFILE" ]]
+	then
+		if [[ "$REP" == "0" ]]
+		then
+			terminate now
+			break
+		elif [[ "$REP" == "2" ]]
+		then
+			break
+		fi
+	fi
+done
+
+rm "$LOCKFILE"

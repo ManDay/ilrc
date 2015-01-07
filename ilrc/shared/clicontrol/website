@@ -1,0 +1,57 @@
+#!/bin/bash
+
+# ./website <url> [<fullscreen> [<output>]]
+#
+# <url>
+#  Url to show
+#
+# <output>
+#  Monitor number
+#
+# <fullscreen>
+#  0 - Default window
+#  1 - Fullscreen with controls
+#  2 - Fullscreen without controls
+##
+
+url="$1"
+mode="$2"
+output="$3"
+
+rm -Rf /home/demo/.mozilla
+tar xf /home/shared/profiles/mozilla.tar.bz2 -C /home/demo
+
+if [[ "$mode" == "2" ]]
+then
+	profile="fullscreen"
+else
+	profile="default"
+fi
+
+firefox -no-remote -P "$profile" -new-instance "$1" &
+
+PID=$!
+
+trap "kill $PID" INT TERM
+
+maxwait=30
+s=0
+while (( s<maxwait )) && ! parent=$(xdotool search --all --pid $PID --onlyvisible --name 'Mozilla Firefox')
+do
+	echo "Waiting for Firefox Window"
+	sleep 1
+	s=$(( s + 1 ))
+done
+
+xdotool windowmove $parent $(getoo "$output")
+xdotool windowfocus --sync $parent
+
+if [[ "$mode" == "1" || "$mode" == "2" ]]
+then
+	xdotool key F11
+fi
+
+sleep 20
+xdotool windowactivate $parent
+
+wait $PID

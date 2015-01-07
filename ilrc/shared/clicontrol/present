@@ -1,0 +1,37 @@
+#!/bin/bash
+
+# ./present <onquit> <output> <file> <command> [<args> ...]
+#
+# file:
+# The file to present
+#
+# onquit:
+#  Repetition handling to be passed to ./repeat
+#
+# command:
+#  Command name
+#
+# output:
+#  Monitor number on which to run
+#
+# args:
+#  Command arguments
+##
+
+PRESENTROOT="/home/shared/uploads/present"
+
+onquit=$1
+monitor="$2"
+file="$PRESENTROOT/$3"
+command="$4"
+
+shift 4
+
+if [[ -f "$file" ]]
+then
+	ident="present_$monitor"
+	
+	stop "$ident"
+	repeat "$onquit" "$ident" "$command" "$file" $monitor "$@"
+fi
+

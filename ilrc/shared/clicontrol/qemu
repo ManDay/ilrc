@@ -1,0 +1,38 @@
+#!/bin/bash
+
+windows="$HOME/windows.qcow2"
+file="$HOME/windows.spice"
+pidfile="$HOME/windows.pid"
+
+if [[ "$1" && -f "$1" ]]
+then
+	backing_file="$1"
+else
+	backing_file="/usr/local/lib/windows_adjusted.qcow2"
+fi
+
+if [[ ! -f "$windows" || "$2" != "0" ]]
+then
+	echo "Resetting image to backing file $backing_file"
+	qemu-img create -f qcow2 -o backing_file="$backing_file" "$windows"
+fi
+
+qemu-kvm -m 2048 -usbdevice tablet -pidfile "$pidfile" -qmp unix:./windows.sock,server,nowait -display none -spice port=5001,password=pass -vga qxl -device usb-ehci,id=USB2Ctrl -device usb-host,bus=USB2Ctrl.0,hostbus=3,hostport=2 -device usb-host,bus=USB2Ctrl.0,hostbus=3,hostport=1 "$windows" &
+
+qemu_pid=$!
+
+echo $'[connection]\nhost=127.0.0.1\nport=5001\npassword=pass' > "$file"
+
+sleep 10
+
+vinagre -fF "$file" &
+vinagre_pid=$!
+
+# Simulate a mouse click to get rid of vinagre's toolbar
+sleep 2
+xdotool click 1
+
+wait "$qemu_pid"
+
+rm "$pidfile"
+kill "$vinagre_pid"

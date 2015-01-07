@@ -1,0 +1,32 @@
+#!/bin/bash
+
+## INJECTOR
+#
+# . <host> <command>
+#
+# Dispatches commands <command> to <host> as soon as <host> is reachable
+# by SSH.
+#
+# BEWARE: Dispatching commands which terminate the connection to SSH will be
+# redispatched indefinitely!
+##
+
+LINE="$2"
+TARGET="$1"
+
+MAX_TRIALS=60
+
+AGAIN=1
+TRIALS=0
+while (( AGAIN && TRIALS < MAX_TRIALS ))
+do
+	echo "Trying to dispatch '$LINE'"
+	./ssh.bsh "$TARGET" "$LINE" < /dev/null
+
+	AGAIN=$(( $? == 255 ))
+	if (( $AGAIN ))
+	then
+		sleep 2
+		TRIALS=$(( TRIALS + 1 ))
+	fi
+done

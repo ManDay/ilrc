@@ -1,0 +1,16 @@
+#!/bin/bash
+
+## TERMINATE
+#
+# . [now]
+#
+# dbus-send --print-reply --dest=org.gnome.Shell '/org/gnome/SessionManager/EndSessionDialog' 'org.gnome.SessionManager.EndSessionDialog.Open' 'uint32:0' 'uint32:1' "uint32:$DELAY" 'array:objpath:/org/gnome/SessionManager/EndSessionDialog'
+
+if [[ "$1" == "now" ]]
+then
+	sudo /sbin/shutdown -h now
+else
+	gnome-session-quit --power-off
+fi
+
+

@@ -1,0 +1,16 @@
+#!/bin/bash
+
+
+# ./stop <command>
+#
+# command:
+#  Command to stop, started by ./repeat
+##
+
+IDENT="$1"
+
+LOCKFILE="/tmp/${IDENT}.lock"
+
+PID=$(cat "$LOCKFILE")
+rm "$LOCKFILE"
+kill -SIGUSR1 $PID

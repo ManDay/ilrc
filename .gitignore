@@ -2,3 +2,4 @@ ilrc/sshdata/demo_rsa
 ilrc/sshdata/demo_rsa.pub
 ilrc/shared/ssh/authorized_keys
 ilrc/shared/uploads/*
+localhost/*.log

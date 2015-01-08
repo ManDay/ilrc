@@ -41,7 +41,7 @@ for( $i = 0; $i<count( $units ); $i++ ) {
 		?><tr>
 			<td class="data"><?php echo $unit->name; ?></td>
 			<td class="data"><?php echo $unit->mac; ?></td>
-			<td class="data"><?php echo $unit->ip; ?></td>
+			<td class="data"><?php echo is_null( $unit->ip )?"<i>{$unit->subnet}</i>":$unit->ip; ?></td>
 			<td class="state" style="background-color: <?php echo $unit->state[ 0 ]; ?>; color: <?php echo $unit->state[ 1 ]; ?>"><?php echo $unit->state[ 2 ]; ?></td>
 			<td>
 				<input type="hidden" name="mode_<?php echo $i; ?>_id" value="<?php echo $unit->id; ?>" />
@@ -61,7 +61,8 @@ for( $i = 0; $i<count( $units ); $i++ ) {
 		</tr><?php } ?><tr>
 			<td><input type="text" name="new_name" class="hostinput" /></td>
 			<td><input type="text" name="new_mac" class="hostinput" /></td>
-			<td colspan="5"></td>
+			<td><input type="text" name="new_subnet" class="hostinput" /></td>
+			<td colspan="4"></td>
 			<td><button type="submit" name="new"><img src="icons/new.png" alt="Neuer Host" /></button></td>
 		</tr></table>
 	</div>

@@ -10,7 +10,7 @@ $website_table = array(
 function website_start( $settings_array,$unit,$timestamp ) {
 	makestateful( );
 
-	rcboot( $unit->mac,"192.168.0.0/25" );
+	rcboot( $unit->mac,$unit->subnet );
 	mounttools( $unit->name );
 
 	cqappend( "stop website_{$settings_array[ "monitor" ]}",$unit->name );

@@ -12,7 +12,7 @@ function shell_start( $settings_array,$unit,$timestamp ) {
 	if( $settings_array[ "stateful" ]=="t" )
 		makestateful( );
 
-	rcboot( $unit->mac,"192.168.0.0/25" );
+	rcboot( $unit->mac,$unit->subnet );
 	mounttools( $unit->name );
 
 	$command = "shell ".escapeshellarg( str_replace( array( "\n","\r" ),array( ";" ),$settings_array[ "startcode" ] ) );

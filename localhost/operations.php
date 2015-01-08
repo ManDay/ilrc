@@ -59,10 +59,14 @@ define( "BASHDIR","/var/www/ilrc" );
 /** Working directory of programs (for their bash components to work) */
 define( "UTILDIR","/var/www/ilrc" );
 
+/** Logfile (publicly accessible) for operations */
+define( "LOGFILE","/var/www/localhost/access.log" );
+
 class Unit {
 	public $name;
 	public $id;
 	public $ip;
+	public $subnet;
 	public $mac;
 	public $program;
 	public $keep;
@@ -78,6 +82,10 @@ class Program {
 	public $id;
 	public $name;
 	public $ident;
+}
+
+function logentry( $message ) {
+	file_put_contents( LOGFILE,"[{$_SERVER[ "REQUEST_TIME" ]}] {$_SERVER[ "REMOTE_ADDR"]}: $message\n" );
 }
 
 function pgvalue( $value ) {
@@ -157,8 +165,11 @@ for( $i = 0; $i<$passedcount; $i++ ) {
 }
 
 /* SECTION 1.2, Create new host */
-if( isset( $_POST[ "new" ],$_POST[ "new_mac" ],$_POST[ "new_name" ] ) )
-	$query .= "INSERT INTO units(mac,name) VALUES(".pgvalue( $_POST[ "new_mac" ] ).",".pgvalue( $_POST[ "new_name" ] ).");";
+if( isset( $_POST[ "new" ],$_POST[ "new_mac" ],$_POST[ "new_name" ],$_POST[ "new_subnet" ] ) ) {
+	$query .= "INSERT INTO units(mac,name,subnet) VALUES(".pgvalue( $_POST[ "new_mac" ] ).",".pgvalue( $_POST[ "new_name" ] ).",".pgvalue( $_POST[ "new_subnet" ] ) .");";
+
+	logentry( "Created new host {$_POST[ "new_name" ]}" );
+}
 
 $settingsid = NULL;
 
@@ -176,6 +187,7 @@ for( $i = 0; $i<$passedcount; $i++ ) {
 					$query .= "DELETE FROM settings_{$programs[ $row[ "program" ] ]->ident} WHERE	id={$row[ "settings" ]};";
 
 				$query .= "DELETE FROM units WHERE id=$id;";
+				logentry( "Deleted host #$id" );
 			}
 		}
 }
@@ -184,8 +196,11 @@ if( $query!="" )
 	pg_query( $query );
 
 /* SECTION 1.4, Save profile */
-if( isset( $_POST[ "save_profile" ] )&& isset( $_POST[ "profile_name" ] )&& $_POST[ "profile_name" ]!="" )
+if( isset( $_POST[ "save_profile" ] )&& isset( $_POST[ "profile_name" ] )&& $_POST[ "profile_name" ]!="" ) {
 	copy_profile( $_POST[ "profile_name" ],false,0,true );
+
+	logentry( "Saved profile {$_POST[ "profile_name" ]}" );
+}
 
 /* SECTION 1.5, Load profile */
 if( isset( $_POST[ "load_profile" ] )&& isset( $_POST[ "scenario" ] )&& $_POST[ "scenario" ]!="" )
@@ -195,6 +210,8 @@ if( isset( $_POST[ "load_profile" ] )&& isset( $_POST[ "scenario" ] )&& $_POST[ 
 if( isset( $_POST[ "delete_profile" ] )&& isset( $_POST[ "profile_name" ] )&& $_POST[ "profile_name" ]!="" ) {
 	delete_profile_data( $_POST[ "profile_name" ],false );
 	pg_query( "DELETE FROM profilenames WHERE name=".pgvalue( $_POST[ "profile_name" ] ).";" );
+
+	logentry( "Deleted profile {$_POST[ "profile_name" ]}" );
 }
 
 /* SECTION 1.7, Keep all hosts */
@@ -206,6 +223,7 @@ if( isset( $_POST[ "keepall" ] ) ) {
 $state_query = "SELECT
 	units.name AS name,
 	units.id AS id,
+	units.subnet AS subnet,
 	units.program AS runprogram,
 	units.settings AS runsettings,
 	units.ip AS ip,
@@ -229,6 +247,8 @@ $state = pg_query( $state_query );
 
 $applyid =( !isset( $_POST[ "settingscancel" ] )&& isset( $_POST[ "settingsapply" ],$_POST[ "mode_0_id" ] ) )?(int)( $_POST[ "mode_0_id" ] ):NULL;
 $perform = isset( $_POST[ "perform" ] );
+
+$logsum = "Executed profile: ";
 
 include( "utils.php" );
 
@@ -276,6 +296,7 @@ while( $row = pg_fetch_array( $state ) ) {
 
 	$unit->name = $row[ "name" ];
 	$unit->id = $row[ "id" ];
+	$unit->subnet = $row[ "subnet" ];
 	$unit->ip = $row[ "ip" ];
 	$unit->mac = $row[ "mac" ];
 	$unit->program = $row[ "program" ];
@@ -321,6 +342,8 @@ while( $row = pg_fetch_array( $state ) ) {
 			$startcall = "{$progident}_start";
 			$is_stateful = false;
 
+			$logsum .= "$unit->name -> $progident; ";
+
 			$phproot = getcwd( );
 			chdir( UTILDIR );
 			$startcall( $settingsarray,$unit,$timestamp );
@@ -342,6 +365,9 @@ while( $row = pg_fetch_array( $state ) ) {
 
 	$units[ ]= $unit;
 }
+
+if( $perform )
+	logentry( $logsum );
 
 /* SECTION 2.5, Query state of units
  *

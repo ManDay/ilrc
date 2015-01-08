@@ -13,7 +13,7 @@ function windows_start( $settings_array,$unit,$timestamp ) {
 	global $windows_profiles;
 	makestateful( );
 
-	rcboot( $unit->mac,"192.168.0.0/25" );
+	rcboot( $unit->mac,$unit->subnet );
 	mounttools( $unit->name );
 
 	$baseid = (int)( $settings_array[ "base" ] );

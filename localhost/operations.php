@@ -85,7 +85,7 @@ class Program {
 }
 
 function logentry( $message ) {
-	file_put_contents( LOGFILE,"[{$_SERVER[ "REQUEST_TIME" ]}] {$_SERVER[ "REMOTE_ADDR"]}: $message\n" );
+	file_put_contents( LOGFILE,"[".date( "c",$_SERVER[ "REQUEST_TIME" ] )."] {$_SERVER[ "REMOTE_ADDR"]}: $message\n",FILE_APPEND|LOCK_EX );
 }
 
 function pgvalue( $value ) {

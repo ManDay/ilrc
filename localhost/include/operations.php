@@ -100,6 +100,15 @@ while( $row = pg_fetch_array( $programs_result ) ) {
 	pg_query( "CREATE TABLE IF NOT EXISTS settings_{$program->ident}(id integer PRIMARY KEY DEFAULT nextval('settings_{$program->ident}_seq'),".implode( ",",$$table_settings )."); ALTER SEQUENCE settings_{$program->ident}_seq OWNED BY settings_{$program->ident}.id;" );
 }
 
+function verify_consistency( ) {
+	global $programs;
+	foreach( $programs as $program ) {
+		$mismatch = pg_fetch_row( pg_query( "SELECT COUNT(*) FROM settings_{$program->ident} WHERE NOT EXISTS(SELECT * FROM profiles WHERE program={$program->id} AND settings=settings_{$program->ident}.id) AND NOT EXISTS(SELECT * FROM units WHERE program={$program->id} AND settings=settings_{$program->ident}.id);" ) )[ 0 ];
+		if( $mismatch!=0 )
+			echo '<p style="border: 1px solid black; background-color: red; padding: 2px;">Settings for '.$program->name." has $mismatch mismatches.".' This is (despite the alarming color) a non-critical debug message. Please try to remember what you just did and <a href="mailto:sodhi@fir.rwth-aachen.de">tell me</a>.</p>';
+	}
+}
+
 require_once( "copyprofile.php" );
 
 $passedcount = isset( $_POST[ "hostcount" ] )?(int)( $_POST[ "hostcount" ] ):0;
@@ -204,7 +213,7 @@ while( $row = pg_fetch_array( $state ) ) {
 	$unit->downtime = is_null( $row[ "downtime" ] )?NULL:floatval( $row[ "downtime" ] );
 	$unit->runningprogram = $row[ "runprogram" ];
 	$unit->runningsettings = $row[ "runsettings" ];
-
+	
 	$units_fqdns[ ]= "'{$unit->name}'";
 
 	$query = "";
@@ -230,26 +239,26 @@ while( $row = pg_fetch_array( $state ) ) {
 			$singleunit = $unit;
 			$singlemode = SINGLE_DETAILS;
 		}
+
+		if( isset( $_POST[ $prefix ] )&& !isset( $_POST[ "load_profile" ] ) )
+			$unit->keep = $_POST[ $prefix ]=="keep";
 	}
 
 /* SECTION 5, Set the correct program on the host. This should generally
  * correct for the situation where the host does not have a program yet. In
  * that situation, the current role a priori has sufficients rights, because it
  * must have been that user who created the host. */
-	$unit->keep = !isset( $_POST[ $prefix ] )||
-		$_POST[ $prefix ]=="keep" ||
-		isset( $_POST[ "keepall" ] )||
-		$unit->rights<RIGHTS_APPLY;
+	if( $unit->rights<RIGHTS_APPLY || isset( $_POST[ "keepall" ] ) )
+		$unit->keep = true;
 	
 	$keep = $unit->keep?"TRUE":"FALSE";
 
 	$newprogram = is_null( $unit->program )?array_keys( $programs )[ 0 ]:$unit->program;
 
-	if( $unit->rights>=RIGHTS_EDIT && isset( $_POST[ "{$prefix}_target" ] )&&isset( $programs[ (int)( $_POST[ "{$prefix}_target" ] ) ] ) )
+	if( $unit->rights>=RIGHTS_EDIT && isset( $_POST[ "{$prefix}_target" ] )&&isset( $programs[ (int)( $_POST[ "{$prefix}_target" ] ) ] )&& !isset( $_POST[ "load_profile" ] ) )
 		$newprogram = (int)( $_POST[ "{$prefix}_target" ] );
 
 	if( !is_null( $unit->program )&& $unit->program!=$newprogram ) {
-		echo "ACTUALLY ALTERED PROGRAM OF UNIT {$unit->id} -- ";
 		$progident = $programs[ $unit->program ]->ident;
 		$deletecall = "{$progident}_ondelete";
 		
@@ -257,7 +266,7 @@ while( $row = pg_fetch_array( $state ) ) {
 		unset( $oldsettings[ "id" ] );
 		$deletecall( $oldsettings );
 
-		$query .= "DELETE FROM settings_{$progident} WHERE id='{$unit->program}';";
+		$query .= "DELETE FROM settings_{$progident} WHERE id='{$unit->settings}';";
 
 		$unit->program = NULL;
 	}
@@ -274,12 +283,23 @@ while( $row = pg_fetch_array( $state ) ) {
 		// Program remains unchanged, keep may change
 		$query .= "UPDATE profiles SET keep=$keep WHERE id=$currentprofile AND unit={$unit->id};";
 
-/* SECTION 7, Read settings if necessary. That is: If $fetchsettings is on because we want to go to the settings dialog. If we update the settings, we read them first in order to obtain a list of fields (we don't actually need the data). If the unit will be executed, we need the settings for the actual execution. */
+	pg_query( $query );
+
+	verify_consistency( );
+
+/* SECTION 7, Read settings if necessary. That is: If $fetchsettings is on
+ * because we want to go to the settings dialog. If we update the settings, we
+ * read them first in order to obtain a list of fields (we don't actually need
+ * the data). If the unit will be executed, we need the settings for the actual
+ * execution. */
 	if( $fetchsettings || $unit->id==$applyid || $perform && !$unit->keep ) {
 		$progident = $programs[ $unit->program ]->ident;
 
 		$settingsarray = pg_fetch_assoc( pg_query( "SELECT * FROM settings_{$progident} WHERE id={$unit->settings};" ) );
 		unset( $settingsarray[ "id" ] );
+
+		if( $fetchsettings )
+			$settings = $settingsarray;
 
 		if( $unit->id==$applyid && $unit->rights>=RIGHTS_EDIT ) {
 			$configcall = "{$progident}_configure";
@@ -289,15 +309,12 @@ while( $row = pg_fetch_array( $state ) ) {
 			pg_query( "UPDATE settings_{$progident} SET (".implode( ",",array_keys( $settingsarray ) ).")=(".implode( ",",array_map( "pgvalue",array_values( $settingsarray ) ) ).") WHERE id={$unit->settings};" );
 		}
 
-		if( $fetchsettings )
-			$settings = $settingsarray;
-
 /* SECTION 8, Execute program */
 		if( $perform && !$unit->keep ) {
 			$startcall = "{$progident}_start";
 			$is_stateful = false;
 
-			$logsum .= "$unit->name -> $progident; ";
+			$logsum .= "$unit->name($progident) ";
 
 			$phproot = getcwd( );
 			chdir( UTILDIR );
@@ -354,6 +371,8 @@ while( $row = pg_fetch_array( $state ) ) {
 	if( $query!="" )
 		pg_query( $query );
 
+	verify_consistency( );
+
 	if( !is_null( $unit ) ) {
 		if( $unit->rights<RIGHTS_APPLY )
 			$unit->keep = true;
@@ -374,6 +393,8 @@ if( isset( $_POST[ "delete_profile" ] )&& isset( $_POST[ "profile_name" ] )&& $_
 	pg_query( "DELETE FROM profilenames WHERE name=".pgvalue( $_POST[ "profile_name" ] ).";" );
 
 	logentry( "Deleted profile {$_POST[ "profile_name" ]}" );
+
+	verify_consistency( );
 }
 
 if( $perform )
@@ -411,7 +432,7 @@ if( $perform )
  *
  * P && ( S && A || !$A && D<=MS )
  */
-if( isset( $_POST[ "refresh" ] )|| isset( $_POST[ "perform" ] )&& is_null( $settingsid ) ) {
+if( isset( $_POST[ "refresh" ] )|| isset( $_POST[ "perform" ] )&& is_null( $singleunit ) ) {
 	$stateres = array( );
 
 	$phproot = getcwd( );

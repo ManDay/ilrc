@@ -43,7 +43,7 @@ for( $i = 0; $i<count( $units ); $i++ ) {
 	$disabled_apply = $unit->rights<RIGHTS_APPLY?" disabled='disabled'":"";
 		
 		?><tr>
-			<td class="data"><?php echo $unit->name.$unit->rights; ?></td>
+			<td class="data"><?php echo $unit->name; ?></td>
 			<td class="data"><?php echo $unit->mac; ?></td>
 			<td class="data"><?php echo is_null( $unit->ip )?"<i>{$unit->subnet}</i>":$unit->ip; ?></td>
 			<td class="state" style="background-color: <?php echo $unit->state[ 0 ]; ?>; color: <?php echo $unit->state[ 1 ]; ?>"><?php echo $unit->state[ 2 ]; ?></td>

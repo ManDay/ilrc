@@ -50,7 +50,7 @@ if( !isset( $_REQUEST[ "logout" ] ) ) {
 				$role = ILRC_ADMIN;
 				$rolename = ILRC_ADMINNAME;
 		} else {
-			$roles_res = pg_query( "SELECT * FROM roles WHERE name=".pgvalue( $_SESSION[ "rolename" ] ).";" );
+			$roles_res = pg_query( "SELECT * FROM roles WHERE upper(name)=upper(".pgvalue( $_SESSION[ "rolename" ] ).");" );
 			if( $role_row = pg_fetch_row( $roles_res ) ) {
 				$role = $role_row[ 0 ];
 				$rolename = $_SESSION[ "rolename" ];
@@ -64,14 +64,14 @@ if( !isset( $_REQUEST[ "logout" ] ) ) {
 			$loginrole = strstr( $loginstr,":",true );
 			$loginpass = substr( strstr( $loginstr,":" ),1 );
 
-			$auth_res = pg_query( "SELECT id FROM roles WHERE name=".pgvalue( $loginrole )." AND checksum=md5(".pgvalue( $loginpass ).");" );
+			$auth_res = pg_query( "SELECT id,name FROM roles WHERE upper(name)=upper(".pgvalue( $loginrole ).") AND checksum=md5(".pgvalue( $loginpass ).");" );
 		} else {
 			$loginrole = $loginstr;
-			$auth_res = pg_query( "SELECT id FROM roles WHERE name=".pgvalue( $loginrole )." AND checksum=NULL;" );
+			$auth_res = pg_query( "SELECT id,name FROM roles WHERE upper(name)=upper(".pgvalue( $loginrole ).") AND checksum=NULL;" );
 		}
 
 		if( $role_row = pg_fetch_row( $auth_res ) ) {
-			$rolename = $loginrole;
+			$rolename = $role_row[ 1 ];
 			$role = $role_row[ 0 ];
 		}
 

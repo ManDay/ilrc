@@ -4,3 +4,4 @@ ilrc/shared/ssh/authorized_keys
 ilrc/shared/uploads/*
 localhost/*.log
 localhost/pcmap.png
+localhost/include/config.php

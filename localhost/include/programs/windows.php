@@ -39,12 +39,14 @@ function windows_onduplicate( $settings_array ) {
 function windows_preferences( $settings_array,$unit ) {
 	global $windows_profiles;
 
+	$disabled = $unit->rights<RIGHTS_EDIT?' disabled="disabled"':"";
+
 ?>
 
 <table>
-<tr><th><label for="overwrite">Profil zurücksetzen</label></th><td><input type="checkbox" name="overwrite"<?php if( $settings_array[ "overwrite" ]=='t' ) echo ' checked="checked"'; ?> /></td></tr>
+<tr><th><label for="overwrite">Profil zurücksetzen</label></th><td><input type="checkbox"<?php echo $disabled; ?> name="overwrite"<?php if( $settings_array[ "overwrite" ]=='t' ) echo ' checked="checked"'; ?> /></td></tr>
 <tr><th><label for="base">Rücksetz- oder Ausgangsprofil</label></th><td>
-	<select name="base"><?php
+	<select<?php echo $disabled; ?> name="base"><?php
 	$baseid = (int)( $settings_array[ "base" ] );
 
 	$profilenames = array_keys( $windows_profiles );

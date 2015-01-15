@@ -1,0 +1,452 @@
+--
+-- PostgreSQL database dump
+--
+
+SET statement_timeout = 0;
+SET lock_timeout = 0;
+SET client_encoding = 'UTF8';
+SET standard_conforming_strings = on;
+SET check_function_bodies = false;
+SET client_min_messages = warning;
+
+--
+-- Name: plpgsql; Type: EXTENSION; Schema: -; Owner: 
+--
+
+CREATE EXTENSION IF NOT EXISTS plpgsql WITH SCHEMA pg_catalog;
+
+
+--
+-- Name: EXTENSION plpgsql; Type: COMMENT; Schema: -; Owner: 
+--
+
+COMMENT ON EXTENSION plpgsql IS 'PL/pgSQL procedural language';
+
+
+SET search_path = public, pg_catalog;
+
+SET default_tablespace = '';
+
+SET default_with_oids = false;
+
+--
+-- Name: permissions; Type: TABLE; Schema: public; Owner: ilrc; Tablespace: 
+--
+
+CREATE TABLE permissions (
+    role integer NOT NULL,
+    unit integer NOT NULL,
+    rights integer DEFAULT 0 NOT NULL
+);
+
+
+ALTER TABLE public.permissions OWNER TO ilrc;
+
+--
+-- Name: profilenames; Type: TABLE; Schema: public; Owner: ilrc; Tablespace: 
+--
+
+CREATE TABLE profilenames (
+    id integer NOT NULL,
+    name character varying(255)
+);
+
+
+ALTER TABLE public.profilenames OWNER TO ilrc;
+
+--
+-- Name: profilenames_seq; Type: SEQUENCE; Schema: public; Owner: ilrc
+--
+
+CREATE SEQUENCE profilenames_seq
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+ALTER TABLE public.profilenames_seq OWNER TO ilrc;
+
+--
+-- Name: profilenames_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: ilrc
+--
+
+ALTER SEQUENCE profilenames_seq OWNED BY profilenames.id;
+
+
+--
+-- Name: profiles; Type: TABLE; Schema: public; Owner: ilrc; Tablespace: 
+--
+
+CREATE TABLE profiles (
+    id integer,
+    unit integer,
+    program integer,
+    settings integer,
+    keep boolean DEFAULT true NOT NULL
+);
+
+
+ALTER TABLE public.profiles OWNER TO ilrc;
+
+--
+-- Name: programs; Type: TABLE; Schema: public; Owner: ilrc; Tablespace: 
+--
+
+CREATE TABLE programs (
+    id integer NOT NULL,
+    name character varying(255),
+    ident character varying(255)
+);
+
+
+ALTER TABLE public.programs OWNER TO ilrc;
+
+--
+-- Name: programs_seq; Type: SEQUENCE; Schema: public; Owner: ilrc
+--
+
+CREATE SEQUENCE programs_seq
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+ALTER TABLE public.programs_seq OWNER TO ilrc;
+
+--
+-- Name: programs_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: ilrc
+--
+
+ALTER SEQUENCE programs_seq OWNED BY programs.id;
+
+
+--
+-- Name: roles; Type: TABLE; Schema: public; Owner: ilrc; Tablespace: 
+--
+
+CREATE TABLE roles (
+    id integer NOT NULL,
+    name character varying(255),
+    checksum character(32)
+);
+
+
+ALTER TABLE public.roles OWNER TO ilrc;
+
+--
+-- Name: roles_seq; Type: SEQUENCE; Schema: public; Owner: ilrc
+--
+
+CREATE SEQUENCE roles_seq
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+ALTER TABLE public.roles_seq OWNER TO ilrc;
+
+--
+-- Name: roles_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: ilrc
+--
+
+ALTER SEQUENCE roles_seq OWNED BY roles.id;
+
+
+--
+-- Name: units; Type: TABLE; Schema: public; Owner: ilrc; Tablespace: 
+--
+
+CREATE TABLE units (
+    id integer NOT NULL,
+    ip inet,
+    mac macaddr NOT NULL,
+    woken timestamp without time zone,
+    name character varying(255) DEFAULT NULL::character varying NOT NULL,
+    program integer,
+    settings integer,
+    killed timestamp without time zone,
+    subnet cidr
+);
+
+
+ALTER TABLE public.units OWNER TO ilrc;
+
+--
+-- Name: units_seq; Type: SEQUENCE; Schema: public; Owner: ilrc
+--
+
+CREATE SEQUENCE units_seq
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+ALTER TABLE public.units_seq OWNER TO ilrc;
+
+--
+-- Name: units_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: ilrc
+--
+
+ALTER SEQUENCE units_seq OWNED BY units.id;
+
+
+--
+-- Name: id; Type: DEFAULT; Schema: public; Owner: ilrc
+--
+
+ALTER TABLE ONLY profilenames ALTER COLUMN id SET DEFAULT nextval('profilenames_seq'::regclass);
+
+
+--
+-- Name: id; Type: DEFAULT; Schema: public; Owner: ilrc
+--
+
+ALTER TABLE ONLY programs ALTER COLUMN id SET DEFAULT nextval('programs_seq'::regclass);
+
+
+--
+-- Name: id; Type: DEFAULT; Schema: public; Owner: ilrc
+--
+
+ALTER TABLE ONLY roles ALTER COLUMN id SET DEFAULT nextval('roles_seq'::regclass);
+
+
+--
+-- Name: id; Type: DEFAULT; Schema: public; Owner: ilrc
+--
+
+ALTER TABLE ONLY units ALTER COLUMN id SET DEFAULT nextval('units_seq'::regclass);
+
+
+--
+-- Data for Name: permissions; Type: TABLE DATA; Schema: public; Owner: ilrc
+--
+
+COPY permissions (role, unit, rights) FROM stdin;
+\.
+
+
+--
+-- Data for Name: profilenames; Type: TABLE DATA; Schema: public; Owner: ilrc
+--
+
+COPY profilenames (id, name) FROM stdin;
+0	[CURRENT]
+\.
+
+
+--
+-- Name: profilenames_seq; Type: SEQUENCE SET; Schema: public; Owner: ilrc
+--
+
+SELECT pg_catalog.setval('profilenames_seq', 1, false);
+
+
+--
+-- Data for Name: profiles; Type: TABLE DATA; Schema: public; Owner: ilrc
+--
+
+COPY profiles (id, unit, program, settings, keep) FROM stdin;
+\.
+
+
+--
+-- Data for Name: programs; Type: TABLE DATA; Schema: public; Owner: ilrc
+--
+
+COPY programs (id, name, ident) FROM stdin;
+1	Ausschalten	shutdown
+2	Vorführung	present
+3	Webseite	website
+4	Shell Kommando	shell
+5	Windows	windows
+6	Multiplexer	hydra
+\.
+
+
+--
+-- Name: programs_seq; Type: SEQUENCE SET; Schema: public; Owner: ilrc
+--
+
+SELECT pg_catalog.setval('programs_seq', 6, true);
+
+
+--
+-- Data for Name: roles; Type: TABLE DATA; Schema: public; Owner: ilrc
+--
+
+COPY roles (id, name, checksum) FROM stdin;
+\.
+
+
+--
+-- Name: roles_seq; Type: SEQUENCE SET; Schema: public; Owner: ilrc
+--
+
+SELECT pg_catalog.setval('roles_seq', 1, false);
+
+
+--
+-- Data for Name: units; Type: TABLE DATA; Schema: public; Owner: ilrc
+--
+
+COPY units (id, ip, mac, woken, name, program, settings, killed, subnet) FROM stdin;
+\.
+
+
+--
+-- Name: units_seq; Type: SEQUENCE SET; Schema: public; Owner: ilrc
+--
+
+SELECT pg_catalog.setval('units_seq', 1, false);
+
+
+--
+-- Name: permissions_role_unit_key; Type: CONSTRAINT; Schema: public; Owner: ilrc; Tablespace: 
+--
+
+ALTER TABLE ONLY permissions
+    ADD CONSTRAINT permissions_role_unit_key UNIQUE (role, unit);
+
+
+--
+-- Name: profilenames_pkey; Type: CONSTRAINT; Schema: public; Owner: ilrc; Tablespace: 
+--
+
+ALTER TABLE ONLY profilenames
+    ADD CONSTRAINT profilenames_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: profiles_id_unit_key; Type: CONSTRAINT; Schema: public; Owner: ilrc; Tablespace: 
+--
+
+ALTER TABLE ONLY profiles
+    ADD CONSTRAINT profiles_id_unit_key UNIQUE (id, unit);
+
+
+--
+-- Name: programs_pkey; Type: CONSTRAINT; Schema: public; Owner: ilrc; Tablespace: 
+--
+
+ALTER TABLE ONLY programs
+    ADD CONSTRAINT programs_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: roles_name_key; Type: CONSTRAINT; Schema: public; Owner: ilrc; Tablespace: 
+--
+
+ALTER TABLE ONLY roles
+    ADD CONSTRAINT roles_name_key UNIQUE (name);
+
+
+--
+-- Name: roles_pkey; Type: CONSTRAINT; Schema: public; Owner: ilrc; Tablespace: 
+--
+
+ALTER TABLE ONLY roles
+    ADD CONSTRAINT roles_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: units_mac_key; Type: CONSTRAINT; Schema: public; Owner: ilrc; Tablespace: 
+--
+
+ALTER TABLE ONLY units
+    ADD CONSTRAINT units_mac_key UNIQUE (mac);
+
+
+--
+-- Name: units_name_key; Type: CONSTRAINT; Schema: public; Owner: ilrc; Tablespace: 
+--
+
+ALTER TABLE ONLY units
+    ADD CONSTRAINT units_name_key UNIQUE (name);
+
+
+--
+-- Name: units_pkey; Type: CONSTRAINT; Schema: public; Owner: ilrc; Tablespace: 
+--
+
+ALTER TABLE ONLY units
+    ADD CONSTRAINT units_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: profilenames_name_idx; Type: INDEX; Schema: public; Owner: ilrc; Tablespace: 
+--
+
+CREATE UNIQUE INDEX profilenames_name_idx ON profilenames USING btree (name);
+
+
+--
+-- Name: permissions_role_fkey; Type: FK CONSTRAINT; Schema: public; Owner: ilrc
+--
+
+ALTER TABLE ONLY permissions
+    ADD CONSTRAINT permissions_role_fkey FOREIGN KEY (role) REFERENCES roles(id) ON DELETE CASCADE;
+
+
+--
+-- Name: permissions_unit_fkey; Type: FK CONSTRAINT; Schema: public; Owner: ilrc
+--
+
+ALTER TABLE ONLY permissions
+    ADD CONSTRAINT permissions_unit_fkey FOREIGN KEY (unit) REFERENCES units(id) ON DELETE CASCADE;
+
+
+--
+-- Name: profiles_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: ilrc
+--
+
+ALTER TABLE ONLY profiles
+    ADD CONSTRAINT profiles_id_fkey FOREIGN KEY (id) REFERENCES profilenames(id) ON DELETE CASCADE;
+
+
+--
+-- Name: profiles_program_fkey; Type: FK CONSTRAINT; Schema: public; Owner: ilrc
+--
+
+ALTER TABLE ONLY profiles
+    ADD CONSTRAINT profiles_program_fkey FOREIGN KEY (program) REFERENCES programs(id) ON DELETE SET NULL;
+
+
+--
+-- Name: profiles_unit_fkey; Type: FK CONSTRAINT; Schema: public; Owner: ilrc
+--
+
+ALTER TABLE ONLY profiles
+    ADD CONSTRAINT profiles_unit_fkey FOREIGN KEY (unit) REFERENCES units(id) ON DELETE CASCADE;
+
+
+--
+-- Name: units_program_fkey; Type: FK CONSTRAINT; Schema: public; Owner: ilrc
+--
+
+ALTER TABLE ONLY units
+    ADD CONSTRAINT units_program_fkey FOREIGN KEY (program) REFERENCES programs(id) ON DELETE SET NULL;
+
+
+--
+-- Name: public; Type: ACL; Schema: -; Owner: postgres
+--
+
+REVOKE ALL ON SCHEMA public FROM PUBLIC;
+REVOKE ALL ON SCHEMA public FROM postgres;
+GRANT ALL ON SCHEMA public TO postgres;
+GRANT ALL ON SCHEMA public TO PUBLIC;
+
+
+--
+-- PostgreSQL database dump complete
+--
+

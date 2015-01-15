@@ -16,32 +16,19 @@ Prerequesite: Profile with id $currentprofile exists in profiles. The flow of pr
 - Load a complete list of programs and IDs for various uses throughout
   the program
 
-Part 1: Profile management
-
-1.1 Update the current profile to what was last seen by the user
-
-1.2 If requested, create a new host
-1.3 If requested, delete hosts (and while looping, also find out whether
-     we go to settings) (*)
-1.4 If requested, save the current profile
-1.5 If requested, load a specific profile into the current profile
-1.6 If requested, delete a specific profile
-1.7 If requested, set all hosts in current profile to "keep"
-
-Part 2: Host management
-
-2.1 Load a complete table of the current state and current profile of all
-	units
-
-Then, for each host:
-
-2.2 If requested, apply settings to host
-2.3 If requested to go to settings by (*), load the respective settings
-2.4 If requested, execute current profile
-
-Then, cumulatively
-
-2.5 If requested, query all hosts for their current running state
+ 1 If requested, load a specific profile into the current profile
+ 2 If requested, create a new host
+ 3 Load a complete table of the current state and current profile of all
+	 units. Then, for each host, if permitted...
+ 4 Detect whether we will go to settings for the host
+ 5 Set correct program on host and prepare settings entry
+ 6 Apply specific settings to host
+ 7 If requested, set all hosts in current profile to "keep"
+ 8 If requested, execute current profile for the host
+ 9 If requested, change permissions on the host and delete it
+10 If requested, save the current profile
+11 If requested, query all hosts for their current running state
+12 If requested, delete a specific profile
 
 */
 
@@ -59,8 +46,13 @@ define( "BASHDIR","/var/www/ilrc" );
 /** Working directory of programs (for their bash components to work) */
 define( "UTILDIR","/var/www/ilrc" );
 
-/** Logfile (publicly accessible) for operations */
-define( "LOGFILE","/var/www/localhost/access.log" );
+define( "SINGLE_SETTINGS",1 );
+define( "SINGLE_DETAILS",2 );
+
+define( "RIGHTS_NONE",0 );
+define( "RIGHTS_APPLY",1 );
+define( "RIGHTS_EDIT",2 );
+define( "RIGHTS_DELETE",3 );
 
 class Unit {
 	public $name;
@@ -69,6 +61,7 @@ class Unit {
 	public $subnet;
 	public $mac;
 	public $program;
+	public $rights;
 	public $keep;
 	public $state;
 	public $settings;
@@ -83,27 +76,6 @@ class Program {
 	public $name;
 	public $ident;
 }
-
-function logentry( $message ) {
-	file_put_contents( LOGFILE,"[".date( "c",$_SERVER[ "REQUEST_TIME" ] )."] {$_SERVER[ "REMOTE_ADDR"]}: $message\n",FILE_APPEND|LOCK_EX );
-}
-
-function pgvalue( $value ) {
-	if( is_null( $value ) )
-		return "NULL";
-	else
-		return "'".pg_escape_string( $value )."'";
-}
-
-/* Settings */
-
-$dbhost = "localhost";
-$dbuser = "ilrc";
-$dbdb = "ilrc";
-$dbpass = "ilrcpass";
-$currentprofile = 0;
-
-$conn = pg_connect( "host=$dbhost dbname=$dbdb user=$dbuser password=$dbpass" );
 
 /* Get the list of available programs and their associated id so that
 references to a program id may be resolved to a program name on the client
@@ -132,94 +104,18 @@ require_once( "copyprofile.php" );
 
 $passedcount = isset( $_POST[ "hostcount" ] )?(int)( $_POST[ "hostcount" ] ):0;
 
-/* SECTION 1.1, Update current profile */
-$query = "";
-for( $i = 0; $i<$passedcount; $i++ ) {
-	if( isset( $_POST[ "mode_$i" ],$_POST[ "mode_{$i}_target" ],$_POST[ "mode_{$i}_id" ] ) ) {
-		$id = (int)( $_POST[ "mode_{$i}_id" ] );
+/* SECTION 1, Load profile. Everyone can do that. */
+if( isset( $_POST[ "load_profile" ] )&& isset( $_POST[ "scenario" ] )&& $_POST[ "scenario" ]!="" )
+	copy_profile( 0,true,$_POST[ "scenario" ],false );
 
-		$keep = $_POST[ "mode_$i" ]=="keep"?"TRUE":"FALSE";
-		$program = (int)( $_POST[ "mode_{$i}_target" ] );
-
-		$old_result = pg_query( "SELECT program,settings FROM profiles WHERE id=$currentprofile AND unit=$id;" );
-
-		if( ( $old = pg_fetch_array( $old_result ) )&& $program!=(int)( $old[ "program" ] ) ) {
-			$progident = $programs[ (int)( $old[ "program" ] ) ]->ident;
-			$deletecall = "{$progident}_ondelete";
-			
-			$oldsettings = pg_fetch_assoc( pg_query( "SELECT * FROM settings_{$progident} WHERE id='{$old[ "settings" ]}';" ) );
-			unset( $oldsettings[ "id" ] );
-			$deletecall( $oldsettings );
-
-			$query .= "DELETE FROM settings_{$progident} WHERE id='{$old[ "settings" ]}';";
-		}
-
-		if( !$old || $program!=(int)( $old[ "program" ] ) ) {
-			$newidrow = pg_fetch_array( pg_query( "INSERT INTO settings_{$programs[ $program ]->ident} DEFAULT VALUES RETURNING id;" ) );
-			$settings = $newidrow[ 0 ];
-		} else
-			$settings = $old[ "settings" ];
-
-		$query .= "UPDATE profiles SET program=$program,keep=$keep,settings=$settings WHERE id=$currentprofile AND unit=$id; INSERT INTO profiles(id,unit,program,settings,keep) SELECT 0,id,$program,$settings,$keep FROM units WHERE id=$id AND NOT EXISTS(SELECT * FROM profiles WHERE id=$currentprofile AND unit=$id);";
-	}
-}
-
-/* SECTION 1.2, Create new host */
+/* SECTION 3, Create new host. Everyone can do that. */
 if( isset( $_POST[ "new" ],$_POST[ "new_mac" ],$_POST[ "new_name" ],$_POST[ "new_subnet" ] ) ) {
-	$query .= "INSERT INTO units(mac,name,subnet) VALUES(".pgvalue( $_POST[ "new_mac" ] ).",".pgvalue( $_POST[ "new_name" ] ).",".pgvalue( $_POST[ "new_subnet" ] ) .");";
+	pg_query( "WITH creation AS (INSERT INTO units(mac,name,subnet) VALUES(".pgvalue( $_POST[ "new_mac" ] ).",".pgvalue( $_POST[ "new_name" ] ).",".pgvalue( $_POST[ "new_subnet" ] ) .") RETURNING id) INSERT INTO permissions(role,unit,rights) SELECT $role,id,3 FROM creation;" );
 
 	logentry( "Created new host {$_POST[ "new_name" ]}" );
 }
 
-$settingsid = NULL;
-
-/* SECTION 1.3, Delete hosts */
-for( $i = 0; $i<$passedcount; $i++ ) {
-	if( isset( $_POST[ "mode_{$i}_id" ] ) ) {
-		$id = (int)( $_POST[ "mode_{$i}_id" ] );
-			if( isset( $_POST[ "mode_{$i}_settings" ] ) ) {
-				// SET
-				$settingsid = $id;
-			} elseif( isset( $_POST[ "mode_{$i}_delete" ] ) ) {
-				// DEL
-				$settings_result = pg_query( "SELECT program,settings FROM profiles WHERE unit=$id;" );
-				while( $row = pg_fetch_assoc( $settings_result ) )
-					$query .= "DELETE FROM settings_{$programs[ $row[ "program" ] ]->ident} WHERE	id={$row[ "settings" ]};";
-
-				$query .= "DELETE FROM units WHERE id=$id;";
-				logentry( "Deleted host #$id" );
-			}
-		}
-}
-
-if( $query!="" )
-	pg_query( $query );
-
-/* SECTION 1.4, Save profile */
-if( isset( $_POST[ "save_profile" ] )&& isset( $_POST[ "profile_name" ] )&& $_POST[ "profile_name" ]!="" ) {
-	copy_profile( $_POST[ "profile_name" ],false,0,true );
-
-	logentry( "Saved profile {$_POST[ "profile_name" ]}" );
-}
-
-/* SECTION 1.5, Load profile */
-if( isset( $_POST[ "load_profile" ] )&& isset( $_POST[ "scenario" ] )&& $_POST[ "scenario" ]!="" )
-	copy_profile( 0,true,$_POST[ "scenario" ],false );
-
-/* SECTION 1.6, Delete profile */
-if( isset( $_POST[ "delete_profile" ] )&& isset( $_POST[ "profile_name" ] )&& $_POST[ "profile_name" ]!="" ) {
-	delete_profile_data( $_POST[ "profile_name" ],false );
-	pg_query( "DELETE FROM profilenames WHERE name=".pgvalue( $_POST[ "profile_name" ] ).";" );
-
-	logentry( "Deleted profile {$_POST[ "profile_name" ]}" );
-}
-
-/* SECTION 1.7, Keep all hosts */
-if( isset( $_POST[ "keepall" ] ) ) {
-	pg_query( "UPDATE profiles SET keep='t' WHERE id=$currentprofile;" );
-}
-
-/* SECTION 2.1, Load complete table of all units */
+/* SECTION 5, Load complete table of all units */
 $state_query = "SELECT
 	units.name AS name,
 	units.id AS id,
@@ -232,12 +128,12 @@ $state_query = "SELECT
 	EXTRACT( EPOCH FROM now( )-units.killed )AS downtime,
 	profiles.keep AS keep,
 	profiles.program AS program,
-	profiles.settings AS settings
+	profiles.settings AS settings,
+	permissions.rights AS rights
 	FROM
 		units
-	LEFT JOIN
-		profiles
-	ON units.id=unit AND profiles.id=$currentprofile ORDER BY units.name;";
+	LEFT JOIN profiles ON units.id=profiles.unit AND profiles.id=$currentprofile
+	LEFT JOIN permissions ON units.id=permissions.unit AND permissions.role=".pgvalue( $role )." ORDER BY units.name;";
 
 $messages = array( );
 $unit_fqdns = array( );
@@ -286,7 +182,7 @@ function register_down( ) {
 	$unit->downtime = 0;
 }
 
-$dosettings = false;
+$singleunit = NULL;
 $units_fqdns = array( );
 
 $timestamp = time( );
@@ -295,11 +191,12 @@ while( $row = pg_fetch_array( $state ) ) {
 	$unit = new Unit( );
 
 	$unit->name = $row[ "name" ];
-	$unit->id = $row[ "id" ];
+	$unit->id = (int)( $row[ "id" ] );
 	$unit->subnet = $row[ "subnet" ];
 	$unit->ip = $row[ "ip" ];
+	$unit->rights =( $role==ILRC_ADMIN )?RIGHTS_DELETE:$row[ "rights" ];
 	$unit->mac = $row[ "mac" ];
-	$unit->program = $row[ "program" ];
+	$unit->program = $row[ "program" ]?( (int)( $row[ "program" ] ) ):NULL;
 	$unit->keep = $row[ "keep" ]=="t" || is_null( $unit->program );
 	$unit->state = array( "gray","white","???" );
 	$unit->settings = $row[ "settings" ];
@@ -310,14 +207,81 @@ while( $row = pg_fetch_array( $state ) ) {
 
 	$units_fqdns[ ]= "'{$unit->name}'";
 
-	if( !is_null( $unit->program )&&( $unit->id==$settingsid || $unit->id==$applyid )|| $perform && !$unit->keep ) {
+	$query = "";
+	$prefix = NULL;
+	$fetchsettings = false;
+
+	for( $i = 0; $i<$passedcount; $i++ )
+		if( isset( $_POST[ "mode_{$i}_id" ] )&& (int)( $_POST[ "mode_{$i}_id" ] )==$unit->id ) {
+			$prefix = "mode_{$i}";
+			break;
+		}
+
+/* SECTION 4, Detect whether we will use the host in a single view */
+	if( !is_null( $prefix ) ) {
+		if( isset( $_POST[ "{$prefix}_settings" ] )&& !isset( $_POST[ "settingsokay" ] )&& !isset( $_POST[ "settingscancel" ] ) ) {
+			// SET
+			$singleunit = $unit;
+			$singlemode = SINGLE_SETTINGS;
+
+			$fetchsettings = true;
+		} elseif( isset( $_POST[ "{$prefix}_details" ] ) ) {
+			// DET
+			$singleunit = $unit;
+			$singlemode = SINGLE_DETAILS;
+		}
+	}
+
+/* SECTION 5, Set the correct program on the host. This should generally
+ * correct for the situation where the host does not have a program yet. In
+ * that situation, the current role a priori has sufficients rights, because it
+ * must have been that user who created the host. */
+	$unit->keep = !isset( $_POST[ $prefix ] )||
+		$_POST[ $prefix ]=="keep" ||
+		isset( $_POST[ "keepall" ] )||
+		$unit->rights<RIGHTS_APPLY;
+	
+	$keep = $unit->keep?"TRUE":"FALSE";
+
+	$newprogram = is_null( $unit->program )?array_keys( $programs )[ 0 ]:$unit->program;
+
+	if( $unit->rights>=RIGHTS_EDIT && isset( $_POST[ "{$prefix}_target" ] )&&isset( $programs[ (int)( $_POST[ "{$prefix}_target" ] ) ] ) )
+		$newprogram = (int)( $_POST[ "{$prefix}_target" ] );
+
+	if( !is_null( $unit->program )&& $unit->program!=$newprogram ) {
+		echo "ACTUALLY ALTERED PROGRAM OF UNIT {$unit->id} -- ";
+		$progident = $programs[ $unit->program ]->ident;
+		$deletecall = "{$progident}_ondelete";
+		
+		$oldsettings = pg_fetch_assoc( pg_query( "SELECT * FROM settings_{$progident} WHERE id='{$unit->program}';" ) );
+		unset( $oldsettings[ "id" ] );
+		$deletecall( $oldsettings );
+
+		$query .= "DELETE FROM settings_{$progident} WHERE id='{$unit->program}';";
+
+		$unit->program = NULL;
+	}
+
+	if( is_null( $unit->program ) ) {
+		$newidrow = pg_fetch_array( pg_query( "INSERT INTO settings_{$programs[ $newprogram ]->ident} DEFAULT VALUES RETURNING id;" ) );
+		$newid = $newidrow[ 0 ];
+
+		$query .= "UPDATE profiles SET program=$newprogram,keep=$keep,settings=$newid WHERE id=$currentprofile AND unit={$unit->id}; INSERT INTO profiles(id,unit,program,settings,keep) SELECT $currentprofile,id,$newprogram,$newid,$keep FROM units WHERE id={$unit->id} AND NOT EXISTS(SELECT * FROM profiles WHERE id=$currentprofile AND unit={$unit->id});";
+
+		$unit->program = $newprogram;
+		$unit->settings = $newid;
+	} else
+		// Program remains unchanged, keep may change
+		$query .= "UPDATE profiles SET keep=$keep WHERE id=$currentprofile AND unit={$unit->id};";
+
+/* SECTION 7, Read settings if necessary. That is: If $fetchsettings is on because we want to go to the settings dialog. If we update the settings, we read them first in order to obtain a list of fields (we don't actually need the data). If the unit will be executed, we need the settings for the actual execution. */
+	if( $fetchsettings || $unit->id==$applyid || $perform && !$unit->keep ) {
 		$progident = $programs[ $unit->program ]->ident;
 
 		$settingsarray = pg_fetch_assoc( pg_query( "SELECT * FROM settings_{$progident} WHERE id={$unit->settings};" ) );
 		unset( $settingsarray[ "id" ] );
 
-/* SECTION 2.2, Apply settings to host */
-		if( $unit->id==$applyid ) {
+		if( $unit->id==$applyid && $unit->rights>=RIGHTS_EDIT ) {
 			$configcall = "{$progident}_configure";
 			if( !is_null( $message = $configcall( $settingsarray,$unit ) ) )
 				$messages[ ]= $message;
@@ -325,19 +289,10 @@ while( $row = pg_fetch_array( $state ) ) {
 			pg_query( "UPDATE settings_{$progident} SET (".implode( ",",array_keys( $settingsarray ) ).")=(".implode( ",",array_map( "pgvalue",array_values( $settingsarray ) ) ).") WHERE id={$unit->settings};" );
 		}
 
-/* SECTION 2.3, Remember settings for Setting dialog */
-		if( $unit->id==$settingsid ) {
+		if( $fetchsettings )
 			$settings = $settingsarray;
-			$settingsunit = $unit;
 
-			if( !isset( $_POST[ "settingsokay" ] )&& !isset( $_POST[ "settingscancel" ] ) ) {
-				$dosettings = true;
-				$settingscall = "{$progident}_preferences";
-				$settingsprogname = $programs[ $unit->program ]->name;
-			}
-		}
-
-/* SECTION 2.4, Execute program */
+/* SECTION 8, Execute program */
 		if( $perform && !$unit->keep ) {
 			$startcall = "{$progident}_start";
 			$is_stateful = false;
@@ -355,21 +310,76 @@ while( $row = pg_fetch_array( $state ) ) {
 
 				$newsettings = pg_fetch_array( pg_query( "INSERT INTO settings_$progident(".implode( ",",array_keys( $settingsarray ) ).") VALUES(".implode( ",",array_map( "pgvalue",array_values( $settingsarray ) ) ).") RETURNING id;" ) );
 
-				pg_query( "UPDATE units SET program={$unit->program},settings={$newsettings[ 0 ]} WHERE id={$unit->id};" );
+				$query .= "UPDATE units SET program={$unit->program},settings={$newsettings[ 0 ]} WHERE id={$unit->id};";
 
 				$unit->runningprogram = $unit->program;
 				$unit->runningsettings = $unit->settings;
 			}
 		}
 	}
+		
+/* SECTION 9, change permissions and optionally delete host */
+	if( !is_null( $prefix ) ) {
+		if( isset( $_POST[ "{$prefix}_delete" ] ) ) {
+			// DEL
+			$settings_result = pg_query( "SELECT program,settings FROM profiles WHERE unit={$unit->id};" );
+			while( $row = pg_fetch_assoc( $settings_result ) )
+				$query .= "DELETE FROM settings_{$programs[ $row[ "program" ] ]->ident} WHERE	id={$row[ "settings" ]};";
 
-	$units[ ]= $unit;
+			$query .= "DELETE FROM units WHERE id={$unit->id};";
+			logentry( "Deleted host #{$unit->id}" );
+
+			$unit = NULL;
+		} elseif( isset( $_POST[ "{$prefix}_rights" ],$_POST[ "{$prefix}_rolecount" ] )&& $unit->rights==RIGHTS_DELETE ) {
+			// PER
+			$rolecount = (int)( $_POST[ "{$prefix}_rolecount" ] );
+
+			for( $j = 0; $j<$rolecount; $j++ ) {
+				if( isset( $_POST[ $prefix."_rights_".$j ],$_POST[ $prefix."_rights_{$j}_id" ] ) ) {
+					$roleid = (int)( $_POST[ $prefix."_rights_{$j}_id" ] );
+
+					if( $roleid!=$role ) {
+						$roleright = (int)( $_POST[ $prefix."_rights_".$j ] );
+
+						if( $roleright<0 || $roleright>RIGHTS_DELETE )
+							$roleright = 0;
+
+						$query .= "UPDATE permissions SET rights=$roleright WHERE unit={$unit->id} AND role=$roleid; INSERT INTO permissions(unit,role,rights) SELECT {$unit->id},$roleid,$roleright WHERE NOT EXISTS(SELECT * FROM permissions WHERE unit={$unit->id} AND role=$roleid);";
+					}
+				}
+			}
+		}
+	}
+
+	if( $query!="" )
+		pg_query( $query );
+
+	if( !is_null( $unit ) ) {
+		if( $unit->rights<RIGHTS_APPLY )
+			$unit->keep = true;
+		$units[ ]= $unit;
+	}
+}
+
+/* SECTION 10, Save profile */
+if( isset( $_POST[ "save_profile" ] )&& isset( $_POST[ "profile_name" ] )&& $_POST[ "profile_name" ]!="" ) {
+	copy_profile( $_POST[ "profile_name" ],false,0,true );
+
+	logentry( "Saved profile {$_POST[ "profile_name" ]}" );
+}
+
+/* SECTION 11, Delete profile */
+if( isset( $_POST[ "delete_profile" ] )&& isset( $_POST[ "profile_name" ] )&& $_POST[ "profile_name" ]!="" ) {
+	delete_profile_data( $_POST[ "profile_name" ],false );
+	pg_query( "DELETE FROM profilenames WHERE name=".pgvalue( $_POST[ "profile_name" ] ).";" );
+
+	logentry( "Deleted profile {$_POST[ "profile_name" ]}" );
 }
 
 if( $perform )
 	logentry( $logsum );
 
-/* SECTION 2.5, Query state of units
+/* SECTION 12, Query state of units
  *
  * A unit can be in one of various states, depending on how it responds
  * to ping  ssh, what its woken and killed timestamps are and whether it
@@ -450,13 +460,40 @@ if( isset( $_POST[ "refresh" ] )|| isset( $_POST[ "perform" ] )&& is_null( $sett
 
 	if( $ipquery )
 		pg_query( $ipquery );
+
 }
 
 $profiles_result = pg_query( "SELECT id,name FROM profilenames WHERE id!=$currentprofile;" );
 
-if( $dosettings )
-	include( "settings.php" );
-else
+if( $role==ILRC_ADMIN && isset( $_POST[ "usercount" ] ) ) {
+	$usercount = (int)( $_POST[ "usercount" ] );
+
+	$query = "";
+	
+	for( $i = 0; $i<$usercount; $i++ ) {
+		if( isset( $_POST[ "user_{$i}_id" ] ) ) {
+			$userid = (int)( $_POST[ "user_{$i}_id" ] );
+			
+			if( isset( $_POST[ "user_{$i}_delete" ] ) )
+				$query .= "DELETE FROM roles WHERE id=$userid;";
+			elseif( isset( $_POST[ "user_{$i}_changepass" ],$_POST[ "user_{$i}_password" ] ) )
+				$query .= "UPDATE roles SET checksum=md5(".pgvalue( $_POST[ "user_{$i}_password" ] ).") WHERE id=$userid;";
+		}
+	}
+
+	if( isset( $_POST[ "user_new" ],$_POST[ "user_new_name" ],$_POST[ "user_new_password" ] ) )
+		$query .= "INSERT INTO roles(name,checksum) VALUES(".pgvalue( $_POST[ "user_new_name" ] ).",md5(".pgvalue( $_POST[ "user_new_password" ] )."));";
+
+	if( $query!="" )
+		pg_query( $query );
+}
+
+if( !is_null( $singleunit ) ) {
+	if( $singlemode==SINGLE_SETTINGS )
+		include( "settings.php" );
+	elseif( $singlemode==SINGLE_DETAILS )
+		include( "details.php" );
+} else
 	include( "overview.php" );
 
 ?>

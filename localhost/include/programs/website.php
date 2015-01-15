@@ -28,13 +28,14 @@ function website_onduplicate( $settings_array ) {
 }
 
 function website_preferences( $settings_array,$unit ) {
+	$disabled = $unit->rights<RIGHTS_EDIT?' disabled="disabled"':"";
 
 ?>
 
 <table>
-<tr><th><label for="url">Webseite</label></th><td><input type="text" name="url" value="<?php echo $settings_array[ "url" ]; ?>"/></td></tr>
+<tr><th><label for="url">Webseite</label></th><td><input type="text"<?php echo $disabled; ?> name="url" value="<?php echo $settings_array[ "url" ]; ?>"/></td></tr>
 <tr><th><label for="profile">Darstellung</label></th><td>
-	<select name="profile"><?php
+	<select<?php echo $disabled; ?> name="profile"><?php
 
 	if( ( $profile = (int)( $settings_array[ "profile" ] ) )<0 || $profile>2 )
 		$profile = 0;
@@ -46,7 +47,7 @@ function website_preferences( $settings_array,$unit ) {
 	</select>
 </td></tr>
 <tr><th><label for="onquit">Bei Beendung durch Nutzer</label></th><td>
-	<select name="onquit"><?php
+	<select<?php echo $disabled; ?> name="onquit"><?php
 
 	if( ( $onquit = (int)( $settings_array[ "onquit" ] ) )<0 || $onquit>2 )
 		$onquit = 0;
@@ -56,7 +57,7 @@ function website_preferences( $settings_array,$unit ) {
 		<option value="2"<?php if( $onquit==2 ) echo ' selected="selected"'; ?>>Ignorieren</option>
 	</select>
 </td></tr>
-<tr><th><label for="monitor">Monitor</label></th><td><input type="number" min="0" name="monitor" value="<?php echo $settings_array[ "monitor" ]; ?>" /></td></tr>
+<tr><th><label for="monitor">Monitor</label></th><td><input type="number"<?php echo $disabled; ?> min="0" name="monitor" value="<?php echo $settings_array[ "monitor" ]; ?>" /></td></tr>
 </table>
 
 <?php

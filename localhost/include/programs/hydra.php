@@ -79,6 +79,8 @@ function hydra_preferences( $settings_array,$unit ) {
 	global $programs;
 	global $messages;
 
+	$disabled = $unit->rights<RIGHTS_EDIT?' disabled="disabled"':"";
+
 	$program_ids = array_filter( $programs,function( $program ) { global $hydra_programs; return in_array( $program->ident,$hydra_programs ); } );
 
 	$insettings = false;
@@ -94,7 +96,7 @@ function hydra_preferences( $settings_array,$unit ) {
 ?>
 		<p id="buttonscenter">
 			<input type="hidden" name="guestnumber" value="<?php echo $i; ?>" />
-			<input type="submit" name="guestokay" value="Unterprogramm speichern" />
+			<input type="submit"<?php echo $disabled; ?> name="guestokay" value="Unterprogramm speichern" />
 			<input type="submit" name="guestcancel" value="Unterprogramm verwerfen" />
 		</p>
 <?php
@@ -125,7 +127,7 @@ function hydra_preferences( $settings_array,$unit ) {
 
 ?>
 <tr><td>
-	<select name="program_<?php echo $i; ?>">
+	<select<?php echo $disabled; ?> name="program_<?php echo $i; ?>">
 		<option value=""<?php if( is_null( $settings_array[ "program_$i" ] ) ) echo ' selected="selected"'; ?>>(Kein Programm)</option>
 <?php
 

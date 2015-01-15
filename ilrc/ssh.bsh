@@ -35,4 +35,4 @@ fi
 		sleep "$delaytime"
 		echo ""
 	fi
-) | ssh -qi /var/www/ilrc/sshdata/demo_rsa -o ConnectTimeout="$to" -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null "demo@$1" "${COMMAND}"
+) | ssh -oBatchMode=yes -qi /var/www/ilrc/sshdata/demo_rsa -o ConnectTimeout="$to" -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null "demo@$1" "${COMMAND}"

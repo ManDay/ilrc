@@ -41,16 +41,18 @@ function shell_stop( $settings_array,$unit,$timestamp ) {
 function shell_preferences( $settings_array,$unit ) {
 	global $shell_applications;
 
+	$disabled = $unit->rights<RIGHTS_EDIT?' disabled="disabled"':"";
+
 ?>
 
 <p>Synchronisations-Quelle bei <?php echo date( "c" ); ?></p>
 
 <table>
-<tr><th><label for="startcode">Start Programmcode</label></th><td><input type="text" name="startcode" value="<?php echo htmlentities( $settings_array[ "startcode" ] ); ?>" /></td></tr>
-<tr><th><label for="startsync">Synchronisation</label></th><td><input type="text" name="startsync" value="<?php echo $settings_array[ "startsync" ]; ?>" /></tr>
-<tr><th><label for="stateful">Programm etablieren</label></th><td><input name="stateful" type="checkbox"<?php if( $settings_array[ "stateful" ]=="t" ) echo( ' checked="checked"' ); ?> /></tr>
-<tr><th><label for="stopcode">Stop Programmcode</label></th><td><input type="text" name="stopcode" value="<?php echo htmlentities( $settings_array[ "stopcode" ] ); ?>" /></td></tr>
-<tr><th><label for="stopsync">Synchronisation</label></th><td><input type="text" name="stopsync" value="<?php echo $settings_array[ "stopsync" ]; ?>" /></tr>
+<tr><th><label for="startcode">Start Programmcode</label></th><td><input type="text"<?php echo $disabled; ?> name="startcode" value="<?php echo htmlentities( $settings_array[ "startcode" ] ); ?>" /></td></tr>
+<tr><th><label for="startsync">Synchronisation</label></th><td><input type="text"<?php echo $disabled; ?> name="startsync" value="<?php echo $settings_array[ "startsync" ]; ?>" /></tr>
+<tr><th><label for="stateful">Programm etablieren</label></th><td><input name="stateful"<?php echo $disabled; ?> type="checkbox"<?php if( $settings_array[ "stateful" ]=="t" ) echo( ' checked="checked"' ); ?> /></tr>
+<tr><th><label for="stopcode">Stop Programmcode</label></th><td><input type="text"<?php echo $disabled; ?> name="stopcode" value="<?php echo htmlentities( $settings_array[ "stopcode" ] ); ?>" /></td></tr>
+<tr><th><label for="stopsync">Synchronisation</label></th><td><input type="text"<?php echo $disabled; ?> name="stopsync" value="<?php echo $settings_array[ "stopsync" ]; ?>" /></tr>
 </table>
 
 <?php

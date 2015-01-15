@@ -17,6 +17,14 @@ div#main, div#footer {
 	border: 1px solid black;
 }
 
+div#admin {
+	background-color: #FF2222;
+	border: 1px solid black;
+	border-top-style: none;
+	color: white;
+	overflow: hidden;
+}
+
 div#footer {
 	border-top-style: none;
 }
@@ -79,7 +87,7 @@ li a::after {
 
 h1 {
 	font-family: sans-serif;
-	margin: 0.4em 2em 0em 2em;
+	margin: 0.5em 2em 0em 2em;
 	font-size: 44px;
 	font-weight: bold;
 	color: #0080ff;

@@ -30,10 +30,12 @@ function shutdown_onduplicate( $settings_array ) {
 }
 
 function shutdown_preferences( $settings_array,$unit ) {
+	$disabled = $unit->rights<RIGHTS_EDIT?' disabled="disabled"':"";
+
 ?>
 
 <table>
-<tr><th><label for="force">Hart abschalten</label></th><td><input type="checkbox" name="force"<?php if( $settings_array[ "force" ]=='t' ) echo ' checked="checked"'; ?> /></td></tr>
+<tr><th><label for="force">Hart abschalten</label></th><td><input type="checkbox"<?php echo $disabled; ?> name="force"<?php if( $settings_array[ "force" ]=='t' ) echo ' checked="checked"'; ?> /></td></tr>
 </table>
 
 <?php

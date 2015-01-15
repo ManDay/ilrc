@@ -53,6 +53,8 @@ function present_stop( $settings_array,$unit,$timestamp ) {
 function present_preferences( $settings_array,$unit ) {
 	global $present_applications;
 
+	$disabled = $unit->rights<RIGHTS_EDIT?' disabled="disabled"':"";
+
 ?>
 
 <table>
@@ -66,7 +68,7 @@ function present_preferences( $settings_array,$unit ) {
 		if( $file!=".." && $file!="." ) {
 
 ?>
-		<option value="<?php echo $file; ?>"<?php if( $current==$file ) echo ' selected="selected"'; ?>><?php echo $file ; ?></option>
+		<option<?php echo $disabled; ?> value="<?php echo $file; ?>"<?php if( $current==$file ) echo ' selected="selected"'; ?>><?php echo $file ; ?></option>
 <?php
 
 		}
@@ -74,10 +76,10 @@ function present_preferences( $settings_array,$unit ) {
 ?>
 	</select>
 </td></tr>
-<tr><th><label for="new">Neue Datei hochladen</label></th><td><input type="hidden" name="MAX_FILE_SIZE" value="<?php echo MAX_FILESIZE; ?>" /><input type="file" name="new" /></td></tr>
-<tr><th><label for="fullscreen">Vollbildmodus</label></th><td><input type="checkbox" name="fullscreen"<?php if( $settings_array[ "fullscreen" ]=='t' ) echo ' checked="checked"'; ?> /></td></tr>
+<tr><th><label for="new">Neue Datei hochladen</label></th><td><input type="hidden" name="MAX_FILE_SIZE" value="<?php echo MAX_FILESIZE; ?>" /><input type="file"<?php echo $disabled; ?> name="new" /></td></tr>
+<tr><th><label for="fullscreen">Vollbildmodus</label></th><td><input type="checkbox"<?php echo $disabled; ?> name="fullscreen"<?php if( $settings_array[ "fullscreen" ]=='t' ) echo ' checked="checked"'; ?> /></td></tr>
 <tr><th><label for="onquit">Bei Beendung durch Nutzer</label></th><td>
-	<select name="onquit"><?php
+	<select<?php echo $disabled; ?> name="onquit"><?php
 	$onquit = (int)( $settings_array[ "onquit" ] );
 ?>
 		<option value="0"<?php if( $onquit==0 ) echo ' selected="selected"'; ?>>Herunterfahren</option>
@@ -86,7 +88,7 @@ function present_preferences( $settings_array,$unit ) {
 	</select>
 </td></tr>
 <tr><th><label for="application">Anwendung</label></th><td>
-	<select name="application"><?php
+	<select<?php echo $disabled; ?> name="application"><?php
 	$appid = (int)( $settings_array[ "application" ] );
 
 	$appnames = array_keys( $present_applications );
@@ -96,7 +98,7 @@ function present_preferences( $settings_array,$unit ) {
 <?php } ?>
 	</select>
 </td></tr>
-<tr><th><label for="monitor">Monitor</label></th><td><input type="number" min="0" name="monitor" value="<?php echo $settings_array[ "monitor" ]; ?>" /></td></tr>
+<tr><th><label for="monitor">Monitor</label></th><td><input type="number"<?php echo $disabled; ?> min="0" name="monitor" value="<?php echo $settings_array[ "monitor" ]; ?>" /></td></tr>
 </table>
 
 <?php

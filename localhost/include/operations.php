@@ -102,8 +102,14 @@ while( $row = pg_fetch_array( $programs_result ) ) {
 
 function verify_consistency( ) {
 	global $programs;
+
 	foreach( $programs as $program ) {
-		$mismatch = pg_fetch_row( pg_query( "SELECT COUNT(*) FROM settings_{$program->ident} WHERE NOT EXISTS(SELECT * FROM profiles WHERE program={$program->id} AND settings=settings_{$program->ident}.id) AND NOT EXISTS(SELECT * FROM units WHERE program={$program->id} AND settings=settings_{$program->ident}.id);" ) )[ 0 ];
+
+		$cond_array = array( );
+		for( $i = 0; $i<4; $i++ )
+			$cond_array[ ]="settings_hydra.program_$i={$program->id} AND settings_hydra.settings_$i=settings_{$program->ident}.id";
+			
+		$mismatch = pg_fetch_row( pg_query( "SELECT COUNT(*) FROM settings_{$program->ident} WHERE NOT EXISTS(SELECT * FROM profiles WHERE program={$program->id} AND settings=settings_{$program->ident}.id) AND NOT EXISTS(SELECT * FROM units WHERE program={$program->id} AND settings=settings_{$program->ident}.id) AND NOT EXISTS(SELECT * FROM settings_hydra WHERE ".join( " OR ",$cond_array ).");" ) )[ 0 ];
 		if( $mismatch!=0 )
 			echo '<p style="border: 1px solid black; background-color: red; padding: 2px;">Settings for '.$program->name." has $mismatch mismatches.".' This is (despite the alarming color) a non-critical debug message. Please try to remember what you just did and <a href="mailto:sodhi@fir.rwth-aachen.de">tell me</a>.</p>';
 	}
@@ -262,7 +268,7 @@ while( $row = pg_fetch_array( $state ) ) {
 		$progident = $programs[ $unit->program ]->ident;
 		$deletecall = "{$progident}_ondelete";
 		
-		$oldsettings = pg_fetch_assoc( pg_query( "SELECT * FROM settings_{$progident} WHERE id='{$unit->program}';" ) );
+		$oldsettings = pg_fetch_assoc( pg_query( "SELECT * FROM settings_{$progident} WHERE id='{$unit->settings}';" ) );
 		unset( $oldsettings[ "id" ] );
 		$deletecall( $oldsettings );
 
@@ -285,8 +291,6 @@ while( $row = pg_fetch_array( $state ) ) {
 
 	pg_query( $query );
 
-	verify_consistency( );
-
 /* SECTION 7, Read settings if necessary. That is: If $fetchsettings is on
  * because we want to go to the settings dialog. If we update the settings, we
  * read them first in order to obtain a list of fields (we don't actually need
@@ -298,9 +302,6 @@ while( $row = pg_fetch_array( $state ) ) {
 		$settingsarray = pg_fetch_assoc( pg_query( "SELECT * FROM settings_{$progident} WHERE id={$unit->settings};" ) );
 		unset( $settingsarray[ "id" ] );
 
-		if( $fetchsettings )
-			$settings = $settingsarray;
-
 		if( $unit->id==$applyid && $unit->rights>=RIGHTS_EDIT ) {
 			$configcall = "{$progident}_configure";
 			if( !is_null( $message = $configcall( $settingsarray,$unit ) ) )
@@ -308,6 +309,9 @@ while( $row = pg_fetch_array( $state ) ) {
 
 			pg_query( "UPDATE settings_{$progident} SET (".implode( ",",array_keys( $settingsarray ) ).")=(".implode( ",",array_map( "pgvalue",array_values( $settingsarray ) ) ).") WHERE id={$unit->settings};" );
 		}
+
+		if( $fetchsettings )
+			$settings = $settingsarray;
 
 /* SECTION 8, Execute program */
 		if( $perform && !$unit->keep ) {
@@ -371,8 +375,6 @@ while( $row = pg_fetch_array( $state ) ) {
 	if( $query!="" )
 		pg_query( $query );
 
-	verify_consistency( );
-
 	if( !is_null( $unit ) ) {
 		if( $unit->rights<RIGHTS_APPLY )
 			$unit->keep = true;
@@ -393,9 +395,9 @@ if( isset( $_POST[ "delete_profile" ] )&& isset( $_POST[ "profile_name" ] )&& $_
 	pg_query( "DELETE FROM profilenames WHERE name=".pgvalue( $_POST[ "profile_name" ] ).";" );
 
 	logentry( "Deleted profile {$_POST[ "profile_name" ]}" );
-
-	verify_consistency( );
 }
+
+verify_consistency( );
 
 if( $perform )
 	logentry( $logsum );

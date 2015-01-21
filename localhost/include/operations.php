@@ -100,6 +100,16 @@ while( $row = pg_fetch_array( $programs_result ) ) {
 	pg_query( "CREATE TABLE IF NOT EXISTS settings_{$program->ident}(id integer PRIMARY KEY DEFAULT nextval('settings_{$program->ident}_seq'),".implode( ",",$$table_settings )."); ALTER SEQUENCE settings_{$program->ident}_seq OWNED BY settings_{$program->ident}.id;" );
 }
 
+function has_profile_right( $profilename ) {
+	global $role;
+	if( $role==ILRC_ADMIN )
+		return true;
+
+	$min_rights = pg_fetch_row( pg_query( "SELECT min(coalesce(permissions.rights,0)) FROM profiles LEFT JOIN profilenames ON profiles.id=profilenames.id LEFT JOIN units ON profiles.unit=units.id LEFT JOIN permissions ON units.id=permissions.unit AND permissions.role=$role WHERE profilenames.name=".pgvalue( $profilename )." AND profiles.keep=false;" ) )[ 0 ];
+	
+	return $min_rights==RIGHTS_DELETE;
+}
+
 function verify_consistency( ) {
 	global $programs;
 
@@ -150,6 +160,7 @@ $state_query = "SELECT
 	LEFT JOIN profiles ON units.id=profiles.unit AND profiles.id=$currentprofile
 	LEFT JOIN permissions ON units.id=permissions.unit AND permissions.role=".pgvalue( $role )." ORDER BY units.name;";
 
+/** [ 0 ]: Background-Color, [ 1 ]: Text- and Border-Color, [ 2 ]: Message */
 $messages = array( );
 $unit_fqdns = array( );
 $units = array( );
@@ -382,19 +393,36 @@ while( $row = pg_fetch_array( $state ) ) {
 	}
 }
 
-/* SECTION 10, Save profile */
+/* SECTION 10, Save profile. If it already, exists, the role must have profile
+ * rights */
 if( isset( $_POST[ "save_profile" ] )&& isset( $_POST[ "profile_name" ] )&& $_POST[ "profile_name" ]!="" ) {
-	copy_profile( $_POST[ "profile_name" ],false,0,true );
+	$profilename = $_POST[ "profile_name" ];
 
-	logentry( "Saved profile {$_POST[ "profile_name" ]}" );
+	$exists = pg_fetch_row( pg_query( "SELECT EXISTS(SELECT * FROM profilenames WHERE name=".pgvalue( $profilename ).");" ) )[ 0 ]=="t";
+
+	if( !$exists || has_profile_right( $profilename ) ) {
+		copy_profile( $_POST[ "profile_name" ],false,0,true );
+
+		logentry( "Saved profile {$_POST[ "profile_name" ]}" );
+	} else {
+		logentry( "Modification of profile $profilename failed due to insufficient rights" );
+		$messages[ ]= array( "grey","red","Ihnen fehlen bei einem oder mehr Hosts die nötigten Rechte, um das unter dem Namen '$profilename' bestehende Profil zu überschreiben!" );
+	}
 }
 
 /* SECTION 11, Delete profile */
 if( isset( $_POST[ "delete_profile" ] )&& isset( $_POST[ "profile_name" ] )&& $_POST[ "profile_name" ]!="" ) {
-	delete_profile_data( $_POST[ "profile_name" ],false );
-	pg_query( "DELETE FROM profilenames WHERE name=".pgvalue( $_POST[ "profile_name" ] ).";" );
+	$profilename = $_POST[ "profile_name" ];
 
-	logentry( "Deleted profile {$_POST[ "profile_name" ]}" );
+	if( has_profile_right( $profilename ) ) {
+		delete_profile_data( $profilename,false );
+		pg_query( "DELETE FROM profilenames WHERE name=".pgvalue( $profilename ).";" );
+
+		logentry( "Deleted profile $profilename" );
+	} else {
+		logentry( "Deletion of profile $profilename failed due to insufficient rights" );
+		$messages[ ]= array( "grey","red","Ihnen fehlen bei einem oder mehr Hosts die nötigten Rechte, um dieses Profil zu löschen!" );
+	}
 }
 
 verify_consistency( );

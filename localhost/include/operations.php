@@ -146,7 +146,7 @@ if( isset( $_POST[ "load_profile" ] )&& isset( $_POST[ "scenario" ] )&& $_POST[ 
 /* SECTION 3, Create new host. Everyone can do that. */
 if( isset( $_POST[ "new" ],$_POST[ "new_mac" ],$_POST[ "new_name" ],$_POST[ "new_subnet" ] ) ) {
 	if( $role==ILRC_ADMIN )
-		pg_query( "INSERT INTO units(mac,name,subnet) VALUES(".pgvalue( $_POST[ "new_mac" ] ).",".pgvalue( $_POST[ "new_name" ] ).",".pgvalue( $_POST[ "new_subnet" ] ) .";" );
+		pg_query( "INSERT INTO units(mac,name,subnet) VALUES(".pgvalue( $_POST[ "new_mac" ] ).",".pgvalue( $_POST[ "new_name" ] ).",".pgvalue( $_POST[ "new_subnet" ] ) .");" );
 	else
 		pg_query( "WITH creation AS (INSERT INTO units(mac,name,subnet) VALUES(".pgvalue( $_POST[ "new_mac" ] ).",".pgvalue( $_POST[ "new_name" ] ).",".pgvalue( $_POST[ "new_subnet" ] ) .") RETURNING id) INSERT INTO permissions(role,unit,rights) SELECT $role,id,3 FROM creation;" );
 	

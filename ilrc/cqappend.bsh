@@ -92,7 +92,7 @@ do
 		while (( AGAIN && TRIALS < MAX_TRIALS ))
 		do
 			echo "Trying to dispatch '$LINE'"
-			# Redirect from /dev/null sto ssh doesn't eat our stdin!
+			# Redirect from /dev/null so ssh doesn't eat our stdin!
 			./ssh.bsh "$TARGET" "$LINE" < /dev/null
 
 			AGAIN=$(( $? == 255 ))

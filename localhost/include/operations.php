@@ -130,8 +130,15 @@ function verify_consistency( ) {
 			$cond_array[ ]="settings_hydra.program_$i={$program->id} AND settings_hydra.settings_$i=settings_{$program->ident}.id";
 			
 		$mismatch = pg_fetch_row( pg_query( "SELECT COUNT(*) FROM settings_{$program->ident} WHERE NOT EXISTS(SELECT * FROM profiles WHERE program={$program->id} AND settings=settings_{$program->ident}.id) AND NOT EXISTS(SELECT * FROM units WHERE program={$program->id} AND settings=settings_{$program->ident}.id) AND NOT EXISTS(SELECT * FROM settings_hydra WHERE ".join( " OR ",$cond_array ).");" ) )[ 0 ];
+
 		if( $mismatch!=0 )
-			echo '<p style="border: 1px solid black; background-color: red; padding: 2px;">Settings for '.$program->name." has $mismatch mismatches.".' This is (despite the alarming color) a non-critical debug message. Please try to remember what you just did and <a href="mailto:sodhi@fir.rwth-aachen.de">tell me</a>.</p>';
+			if( isset( $_REQUEST[ "fix" ] ) ) {
+				pg_query( "DELETE FROM settings_{$program->ident} WHERE NOT EXISTS(SELECT * FROM profiles WHERE program={$program->id} AND settings=settings_{$program->ident}.id) AND NOT EXISTS(SELECT * FROM units WHERE program={$program->id} AND settings=settings_{$program->ident}.id) AND NOT EXISTS(SELECT * FROM settings_hydra WHERE ".join( " OR ",$cond_array ).");" );
+				echo '<p style="border: 1px solid black; background-color: blue; padding: 2px;">Settings for '.$program->name." had $mismatch mismatches. The inconsistency was corrected.</p>";
+			} else {
+				logentry( "Mismatch: $mismatch on {$program->name}" );
+				echo '<p style="border: 1px solid black; background-color: red; padding: 2px;">Settings for '.$program->name." has $mismatch mismatches.".' This is (despite the alarming color) a non-critical debug message. Please try to remember what you just did and <a href="mailto:sodhi@fir.rwth-aachen.de">tell me</a>. The mismatch can be automatically corrected by calling this URL with <i>?fix</i> appended to it.</p>';
+			}
 	}
 }
 
@@ -370,6 +377,10 @@ while( $row = pg_fetch_array( $state ) ) {
 			$settings_result = pg_query( "SELECT program,settings FROM profiles WHERE unit={$unit->id};" );
 			while( $row = pg_fetch_assoc( $settings_result ) )
 				$query .= "DELETE FROM settings_{$programs[ $row[ "program" ] ]->ident} WHERE	id={$row[ "settings" ]};";
+
+			$settings_result = pg_query( "SELECT settings FROM units WHERE id={$unit->id};" );
+			if( !is_null( $runningid = pg_fetch_row( $settings_result )[ 0 ] ) )
+				$query .= "DELETE FROM settings_{$programs[ $row[ "program" ] ]->ident} WHERE	id={$runningid};";
 
 			$query .= "DELETE FROM units WHERE id={$unit->id};";
 			logentry( "Deleted host #{$unit->id}" );

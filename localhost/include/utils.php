@@ -33,6 +33,9 @@ function rcboot( $mac,$subnet ) {
 		socket_set_option( $sock,SOL_SOCKET,SO_BROADCAST,1 );
 		socket_sendto( $sock,$packet,strlen( $packet ),MSG_DONTROUTE,$broadcast,7000 );
 		socket_close( $sock );
+
+		// To limit network throughput for sensitive networks
+		usleep( 100 );
 	}
 
 	register_up( );

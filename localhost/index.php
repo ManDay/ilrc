@@ -7,12 +7,10 @@
 <title>Innovations Lab Remote Control</title>
 <?php
 
-/** Logfile (publicly accessible) for operations */
-define( "LOGFILE","/var/www/localhost/access.log" );
-
 /** Admin token */
 require( "include/config.php" );
 define( "ILRC_ADMIN",-1 );
+define( "ILRC_ADMINALIAS","Administrator" );
 
 session_start( );
 
@@ -38,7 +36,7 @@ $rolename = NULL;
 
 function logentry( $message ) {
 	global $rolename;
-	file_put_contents( LOGFILE,"[".date( "c",$_SERVER[ "REQUEST_TIME" ] )."] ".( is_null( $rolename )?"":"$rolename@" )."{$_SERVER[ "REMOTE_ADDR"]}: $message\n",FILE_APPEND|LOCK_EX );
+	file_put_contents( ILRC_LOGFILE,"[".date( "c",$_SERVER[ "REQUEST_TIME" ] )."] ".( is_null( $rolename )?"":"$rolename@" )."{$_SERVER[ "REMOTE_ADDR"]}: $message\n",FILE_APPEND|LOCK_EX );
 }
 
 /* Authentication */
@@ -48,7 +46,7 @@ if( !isset( $_REQUEST[ "logout" ] ) ) {
 	if( isset( $_SESSION[ "role" ] ) ) {
 		if( $_SESSION[ "role" ]==ILRC_ADMIN ) {
 				$role = ILRC_ADMIN;
-				$rolename = ILRC_ADMINNAME;
+				$rolename = ILRC_ADMINALIAS;
 		} else {
 			$roles_res = pg_query( "SELECT * FROM roles WHERE upper(name)=upper(".pgvalue( $_SESSION[ "rolename" ] ).");" );
 			if( $role_row = pg_fetch_row( $roles_res ) ) {
@@ -76,7 +74,7 @@ if( !isset( $_REQUEST[ "logout" ] ) ) {
 		}
 
 		if( $loginstr==ILRC_ADMINNAME ) {
-			$rolename = ILRC_ADMINNAME;
+			$rolename = ILRC_ADMINALIAS;
 			$role = ILRC_ADMIN;
 		}
 	}

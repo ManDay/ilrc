@@ -1,6 +1,6 @@
 #!/bin/bash
 
-## ALIVE CHECK
+## BATCH PING
 #
 # . [<host 1> ...]
 #
@@ -28,7 +28,7 @@ pinger( ) {
 
 	if [[ "$ALIVE" != 1 ]]
 	then	
-		IP=$(dig "$TARGET" | grep -A1 'ANSWER SECTION' | grep -o '[0-9\.]\+$')
+		IP=$(getent hosts "$TARGET" | grep -o '^[^[:space:]]*')
 		echo "$ID $IP"
 	fi
 

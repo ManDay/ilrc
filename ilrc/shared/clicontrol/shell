@@ -1,3 +1,5 @@
 #!/bin/bash
 
 bash -c "$1"
+
+echo "Shell returning from '$1'"

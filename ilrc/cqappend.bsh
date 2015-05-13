@@ -15,14 +15,15 @@ QUEUE_FILE="bootsequences/$TARGET"
 # The file should contain commands which will be executed on the remote host by
 # SSH. When there are no more lines in the queue, the dispatcher waits until
 # new lines are added.
-# When started, the dispatcher will make sure only one instance of itsself is
-# running for that particular host by negotiating a working process through file
 
 PID_FILE="bootsequences/dispatch_$TARGET"
 
 # If a command in the file begins with "&", it will be dispatched blindly
 # without checking for succces. If a command in the file begins with a "#", it
 # will not be redispatched.
+
+# When started, the dispatcher will make sure only one instance of itsself is
+# running for that particular host by negotiating a working process through file
 #
 # BEWARE: Dispatching commands which terminate the connection without "&" to
 # SSH will be redispatched until the number of maximum tries has been reached.
@@ -34,7 +35,7 @@ MAXIMUM_TRIALS=50
 
 # Make sure there is no dispatcher running, yet
 # The second condition asserts that when we relooped, because no
-# proces with the filed PID was found running, we will not keep
+# process with the filed PID was found running, we will not keep
 # relooping because of an orphaned PID file
 
 while [[ -f $PID_FILE && "$(cat $PID_FILE)" != $PID ]]

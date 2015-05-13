@@ -3,6 +3,8 @@
 yum -y check-update
 yum -y update
 
+poweroff
+
 exit
 
 yum -y install http://linuxdownload.adobe.com/adobe-release/adobe-release-x86_64-1.0-1.noarch.rpm

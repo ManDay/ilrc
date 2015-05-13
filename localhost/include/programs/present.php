@@ -1,7 +1,7 @@
 <?php
 
 define( "MAX_FILESIZE",128*1024*1024 );
-define( "UPLOAD_DIR","/var/www/ilrc/shared/uploads/present" );
+define( "UPLOAD_DIR","/var/www/ilrc/ilrc/shared/uploads/present" );
 
 $present_table = array(
 	"fullscreen BOOLEAN NOT NULL DEFAULT 't'",

@@ -108,6 +108,14 @@ if( $role==ILRC_ADMIN ) {
 			<td><button type="submit" name="user_new"><img src="icons/new.png" alt="Neuer Benutzer" /></button></td>
 		</tr>
 		</table>
+		<hr />
+		<table>
+			<tr><td>
+				<input type="hidden" name="MAX_FILE_SIZE" value="<?php echo MAX_MAPSIZE; ?>" />
+				<input type="file" name="newpcmap" />
+			</td>
+			<td><input type="submit" name="pcmapupload" value="Neue PC Karte hochladen" /></td></tr>
+		</table>
 	</div>
 <?php
 

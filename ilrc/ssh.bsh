@@ -11,6 +11,8 @@
 # remote wait until that locally synced timestamp.
 ##
 
+rsakey="/var/www/ilrc/ilrc/sshdata/demo_rsa"
+
 if [[ "$3" ]]
 then
 	to="$3"
@@ -35,4 +37,4 @@ fi
 		sleep "$delaytime"
 		echo ""
 	fi
-) | ssh -oBatchMode=yes -qi /var/www/ilrc/sshdata/demo_rsa -o ConnectTimeout="$to" -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null "demo@$1" "${COMMAND}"
+) | ssh -oBatchMode=yes -qi "$rsakey" -o ConnectTimeout="$to" -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null "demo@$1" "${COMMAND}"

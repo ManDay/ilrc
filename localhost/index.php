@@ -65,7 +65,7 @@ if( !isset( $_REQUEST[ "logout" ] ) ) {
 			$auth_res = pg_query( "SELECT id,name FROM roles WHERE upper(name)=upper(".pgvalue( $loginrole ).") AND checksum=md5(".pgvalue( $loginpass ).");" );
 		} else {
 			$loginrole = $loginstr;
-			$auth_res = pg_query( "SELECT id,name FROM roles WHERE upper(name)=upper(".pgvalue( $loginrole ).") AND checksum=NULL;" );
+			$auth_res = pg_query( "SELECT id,name FROM roles WHERE upper(name)=upper(".pgvalue( $loginrole ).") AND checksum IS NULL;" );
 		}
 
 		if( $role_row = pg_fetch_row( $auth_res ) ) {

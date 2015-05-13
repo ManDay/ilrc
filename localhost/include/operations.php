@@ -32,20 +32,6 @@ Prerequesite: Profile with id $currentprofile exists in profiles. The flow of pr
 
 */
 
-/** Number of seconds a computer is allowed to boot before unresponsiveness is
- * considered death */
-define( "MAXBOOT",60 );
-
-/** Number of seconds a computer is allowed to remain unresponsive but pingable
- * after shutdown signal */
-define( "MAXSHUTDOWN",80 );
-
-/** Path to where bash component (batch ping) resides */
-define( "BASHDIR","/var/www/ilrc" );
-
-/** Working directory of programs (for their bash components to work) */
-define( "UTILDIR","/var/www/ilrc" );
-
 define( "SINGLE_SETTINGS",1 );
 define( "SINGLE_DETAILS",2 );
 
@@ -554,15 +540,42 @@ if( $role==ILRC_ADMIN && isset( $_POST[ "usercount" ] ) ) {
 			if( isset( $_POST[ "user_{$i}_delete" ] ) )
 				$query .= "DELETE FROM roles WHERE id=$userid;";
 			elseif( isset( $_POST[ "user_{$i}_changepass" ],$_POST[ "user_{$i}_password" ] ) )
-				$query .= "UPDATE roles SET checksum=md5(".pgvalue( $_POST[ "user_{$i}_password" ] ).") WHERE id=$userid;";
+				if( $_POST[ "user_{$i}_password" ]=="" )
+					$query .= "UPDATE roles SET checksum=NULL WHERE id=$userid;";
+				else
+					$query .= "UPDATE roles SET checksum=md5(".pgvalue( $_POST[ "user_{$i}_password" ] ).") WHERE id=$userid;";
 		}
 	}
 
 	if( isset( $_POST[ "user_new" ],$_POST[ "user_new_name" ],$_POST[ "user_new_password" ] ) )
-		$query .= "INSERT INTO roles(name,checksum) VALUES(".pgvalue( $_POST[ "user_new_name" ] ).",md5(".pgvalue( $_POST[ "user_new_password" ] )."));";
+		if( $_POST[ "user_new_password" ]=="" )
+			$query .= "INSERT INTO roles(name) VALUES(".pgvalue( $_POST[ "user_new_name" ] ).");";
+		else
+			$query .= "INSERT INTO roles(name,checksum) VALUES(".pgvalue( $_POST[ "user_new_name" ] ).",md5(".pgvalue( $_POST[ "user_new_password" ] )."));";
 
 	if( $query!="" )
 		pg_query( $query );
+}
+
+if( $role==ILRC_ADMIN && isset( $_FILES[ "newpcmap" ] )&& $_FILES[ "newpcmap" ][ "error" ]!=UPLOAD_ERR_NO_FILE ) {
+	$pcmap = $_FILES[ "newpcmap" ];
+
+	if( $pcmap[ "size" ]>MAX_MAPSIZE )
+		$messages[ ]= array( "red","yellow","Fehler: Datei darf nicht größer als ".MAX_MAPSIZE." Bytes sein!" );
+	else if( $pcmap[ "error" ]!=UPLOAD_ERR_OK )
+		$messages[ ]= array( "red","yellow","Allgemeiner Fehler: Code {$pcmap[ "error" ]}" );
+	else {
+		$extension = pathinfo( $pcmap[ "name" ],PATHINFO_EXTENSION );
+
+		if( $extension!="png" )
+			$messages[ ]= array( "red","yellow","Nur PNG Dateien mit Endung <i>.png</i> werden akzeptiert!" );
+		else {
+			$target = dirname( dirname( __FILE__ ) )."/pcmap.png";
+			$messages[ ]= array( "green","white","Die Karte wurde aktualisiert" );
+			move_uploaded_file( $pcmap[ "tmp_name" ],$target );
+			chmod( $target,0664 );
+		}
+	}
 }
 
 if( !is_null( $singleunit ) ) {

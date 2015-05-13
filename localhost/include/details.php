@@ -4,7 +4,7 @@ $disablestr = ' disabled="disabled"';
 
 $alldisabled = $singleunit->rights!=RIGHTS_DELETE?$disablestr:"";
 
-$rights_res = pg_query( "SELECT roles.id,roles.name,permissions.rights FROM roles LEFT JOIN permissions ON roles.id=permissions.role AND permissions.unit=".pgvalue( $singleunit->id ).";" );
+$rights_res = pg_query( "SELECT roles.id,roles.name,permissions.rights FROM roles LEFT JOIN permissions ON roles.id=permissions.role AND permissions.unit=".pgvalue( $singleunit->id )." ORDER BY roles.id;" );
 
 ?>
 	<div class="row"><p><b>Details für <code><?php echo $singleunit->name; ?></code></b></p></div>

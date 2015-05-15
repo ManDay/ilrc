@@ -86,7 +86,7 @@ function hydra_preferences( $settings_array,$unit ) {
 	$insettings = false;
 
 	for( $i = 0; $i<4; $i++ )
-		if( isset( $_POST[ "hydra_{$i}_settings" ] ) ) {
+		if( isset( $_GET[ "hydra_{$i}_settings" ] ) ) {
 			if( !is_null( $settings_array[ "program_$i" ] ) ) {
 				$progident = $programs[ (int)( $settings_array[ "program_$i" ] ) ]->ident;
 				$guest_settings = pg_fetch_assoc( pg_query( "SELECT * FROM settings_{$progident} WHERE id={$settings_array[ "settings_$i" ]};" ) );
@@ -181,6 +181,9 @@ function hydra_configure( &$settings_array,$unit ) {
 				$settings_array[ "program_$i" ]= $new_program;
 			}
 		}
+
+		if( isset( $_POST[ "hydra_{$i}_settings" ] ) )
+			$_GET[ "hydra_{$i}_settings" ]= 1;
 	}
 
 	$message = NULL;

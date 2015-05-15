@@ -118,7 +118,7 @@ function verify_consistency( ) {
 		$mismatch = pg_fetch_row( pg_query( "SELECT COUNT(*) FROM settings_{$program->ident} WHERE NOT EXISTS(SELECT * FROM profiles WHERE program={$program->id} AND settings=settings_{$program->ident}.id) AND NOT EXISTS(SELECT * FROM units WHERE program={$program->id} AND settings=settings_{$program->ident}.id) AND NOT EXISTS(SELECT * FROM settings_hydra WHERE ".join( " OR ",$cond_array ).");" ) )[ 0 ];
 
 		if( $mismatch!=0 )
-			if( isset( $_REQUEST[ "fix" ] ) ) {
+			if( isset( $_GET[ "fix" ] ) ) {
 				pg_query( "DELETE FROM settings_{$program->ident} WHERE NOT EXISTS(SELECT * FROM profiles WHERE program={$program->id} AND settings=settings_{$program->ident}.id) AND NOT EXISTS(SELECT * FROM units WHERE program={$program->id} AND settings=settings_{$program->ident}.id) AND NOT EXISTS(SELECT * FROM settings_hydra WHERE ".join( " OR ",$cond_array ).");" );
 				echo '<p style="border: 1px solid black; background-color: blue; padding: 2px;">Settings for '.$program->name." had $mismatch mismatches. The inconsistency was corrected.</p>";
 			} else {
@@ -130,7 +130,7 @@ function verify_consistency( ) {
 
 require_once( "copyprofile.php" );
 
-$passedcount = isset( $_POST[ "hostcount" ] )?(int)( $_POST[ "hostcount" ] ):0;
+$passedcount = isset( $_REQUEST[ "hostcount" ] )?(int)( $_REQUEST[ "hostcount" ] ):0;
 
 /* SECTION 1, Load profile. Everyone can do that. */
 if( isset( $_POST[ "load_profile" ] )&& isset( $_POST[ "scenario" ] )&& $_POST[ "scenario" ]!="" )
@@ -166,8 +166,6 @@ $state_query = "SELECT
 	LEFT JOIN profiles ON units.id=profiles.unit AND profiles.id=$currentprofile
 	LEFT JOIN permissions ON units.id=permissions.unit AND permissions.role=".pgvalue( $role )." ORDER BY units.name;";
 
-/** [ 0 ]: Background-Color, [ 1 ]: Text- and Border-Color, [ 2 ]: Message */
-$messages = array( );
 $unit_fqdns = array( );
 $units = array( );
 
@@ -214,11 +212,9 @@ function register_down( ) {
 	$unit->downtime = 0;
 }
 
-$singleunit = NULL;
 $units_fqdns = array( );
 
 $timestamp = time( );
-
 while( $row = pg_fetch_array( $state ) ) {
 	$unit = new Unit( );
 
@@ -243,39 +239,49 @@ while( $row = pg_fetch_array( $state ) ) {
 	$prefix = NULL;
 	$fetchsettings = false;
 
-	for( $i = 0; $i<$passedcount; $i++ )
-		if( isset( $_POST[ "mode_{$i}_id" ] )&& (int)( $_POST[ "mode_{$i}_id" ] )==$unit->id ) {
+	for( $i = 0; $i<$passedcount; $i++ ) {
+		if( isset( $_REQUEST[ "mode_{$i}_id" ] )&& (int)( $_REQUEST[ "mode_{$i}_id" ] )==$unit->id ) {
 			$prefix = "mode_{$i}";
 			break;
 		}
+	}
 
 /* SECTION 4, Detect whether we will use the host in a single view */
-	if( !is_null( $prefix ) ) {
-		if( isset( $_POST[ "{$prefix}_settings" ] )&& !isset( $_POST[ "settingsokay" ] )&& !isset( $_POST[ "settingscancel" ] ) ) {
-			// SET
-			$singleunit = $unit;
-			$singlemode = SINGLE_SETTINGS;
+	if( $unit->rights<RIGHTS_APPLY || isset( $_POST[ "keepall" ] ) )
+		$unit->keep = true;
 
-			$fetchsettings = true;
-		} elseif( isset( $_POST[ "{$prefix}_details" ] ) ) {
-			// DET
-			$singleunit = $unit;
-			$singlemode = SINGLE_DETAILS;
+	if( !is_null( $prefix ) ) {
+		if( isset( $_REQUEST[ "{$prefix}_settings" ] )&& !isset( $_POST[ "settingscancel" ] )&& !isset( $_POST[ "settingsokay" ] ) ) {
+			$_GET[ "mode_0_settings" ]= 1;
+			$_GET[ "mode_0_id" ]= $unit->id;
+			$_GET[ "hostcount" ]= 1;
+
+			if( count( $_POST )==0 ) {
+				$singleunit = $unit;
+				$singlemode = SINGLE_SETTINGS;
+				$fetchsettings = true;
+			}
+		} elseif( isset( $_REQUEST[ "{$prefix}_details" ] ) ) {
+			$_GET[ "mode_0_details" ]= 1;
+			$_GET[ "mode_0_id" ]= $unit->id;
+			$_GET[ "hostcount" ]= 1;
+
+			if( count( $_POST )==0 ) {
+				$singleunit = $unit;
+				$singlemode = SINGLE_DETAILS;
+			}
 		}
 
-		if( isset( $_POST[ $prefix ] )&& !isset( $_POST[ "load_profile" ] ) )
+		if( $unit->rights>=RIGHTS_APPLY && isset( $_POST[ $prefix ] )&& !isset( $_POST[ "load_profile" ] ) )
 			$unit->keep = $_POST[ $prefix ]=="keep";
 	}
+	
+	$keep = $unit->keep?"TRUE":"FALSE";
 
 /* SECTION 5, Set the correct program on the host. This should generally
  * correct for the situation where the host does not have a program yet. In
  * that situation, the current role a priori has sufficients rights, because it
  * must have been that user who created the host. */
-	if( $unit->rights<RIGHTS_APPLY || isset( $_POST[ "keepall" ] ) )
-		$unit->keep = true;
-	
-	$keep = $unit->keep?"TRUE":"FALSE";
-
 	$newprogram = is_null( $unit->program )?array_keys( $programs )[ 0 ]:$unit->program;
 
 	if( $unit->rights>=RIGHTS_EDIT && isset( $_POST[ "{$prefix}_target" ] )&&isset( $programs[ (int)( $_POST[ "{$prefix}_target" ] ) ] )&& !isset( $_POST[ "load_profile" ] ) )
@@ -364,9 +370,10 @@ while( $row = pg_fetch_array( $state ) ) {
 			while( $row = pg_fetch_assoc( $settings_result ) )
 				$query .= "DELETE FROM settings_{$programs[ $row[ "program" ] ]->ident} WHERE	id={$row[ "settings" ]};";
 
-			$settings_result = pg_query( "SELECT settings FROM units WHERE id={$unit->id};" );
-			if( !is_null( $runningid = pg_fetch_row( $settings_result )[ 0 ] ) )
-				$query .= "DELETE FROM settings_{$programs[ $row[ "program" ] ]->ident} WHERE	id={$runningid};";
+			$settings_result = pg_query( "SELECT program,settings FROM units WHERE id={$unit->id};" );
+			$row = pg_fetch_row( $settings_result );
+			if( !is_null( $row[ 0 ] ) )
+				$query .= "DELETE FROM settings_{$programs[ $row[ "program" ] ]->ident} WHERE	id={$row[ "settings" ]};";
 
 			$query .= "DELETE FROM units WHERE id={$unit->id};";
 			logentry( "Deleted host #{$unit->id}" );
@@ -439,8 +446,10 @@ if( isset( $_POST[ "delete_profile" ] )&& isset( $_POST[ "profile_name" ] )&& $_
 
 verify_consistency( );
 
-if( $perform )
+if( $perform ) {
+	$messages[ ]= array( "green","white","Einstellungen werden auf die Computer angewendet" );
 	logentry( $logsum );
+}
 
 /* SECTION 12, Query state of units
  *
@@ -474,7 +483,10 @@ if( $perform )
  *
  * P && ( S && A || !$A && D<=MS )
  */
-if( isset( $_POST[ "refresh" ] )|| isset( $_POST[ "perform" ] )&& is_null( $singleunit ) ) {
+if( isset( $_POST[ "refresh" ] ) ) # || $perform
+	$_GET[ "refresh" ]= 1;
+
+if( isset( $_GET[ "refresh" ] ) ) {
 	$stateres = array( );
 
 	$phproot = getcwd( );
@@ -577,13 +589,5 @@ if( $role==ILRC_ADMIN && isset( $_FILES[ "newpcmap" ] )&& $_FILES[ "newpcmap" ][
 		}
 	}
 }
-
-if( !is_null( $singleunit ) ) {
-	if( $singlemode==SINGLE_SETTINGS )
-		include( "settings.php" );
-	elseif( $singlemode==SINGLE_DETAILS )
-		include( "details.php" );
-} else
-	include( "overview.php" );
 
 ?>

@@ -103,7 +103,7 @@ h3 {
 	margin-left: 1em;
 }
 
-td, th {
+form td,form th {
 	white-space: nowrap;
 }
 

@@ -1,12 +1,3 @@
-<?php
-	foreach( $messages as $message ) {
-?>
-	<div class="row">
-		<p style="border: 2px solid <?php echo $message[ 1 ]; ?>; background-color: <?php echo $message[ 0 ]; ?>; color: <?php echo $message[ 1 ]; ?>">
-			<b><?php echo $message[ 2 ]; ?></b>
-		</p>
-	</div>
-<?php } ?>
 	<div class="row" id="profile">
 		<p id="buttonstopleft">
 			<select name="scenario">

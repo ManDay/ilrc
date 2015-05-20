@@ -116,17 +116,20 @@ if( isset( $_SESSION[ "messages" ] ) ) {
 	$messages = array( );
 
 if( !is_null( $role ) ) {
+	// Logged in
 	$_SESSION[ "role" ]= $role;
 	$_SESSION[ "rolename" ]= $rolename;
 	require( "include/operations.php" );
 } elseif( isset( $_SESSION[ "role" ] ) ) {
+	// Logout
 	unset( $_SESSION[ "role" ] );
 } elseif( isset( $loginrole ) ) {
+	// Failed login
 	$messages[ ]= array( "silver","red","Authentifikation gescheitert! Versuch wurde protokolliert." );
 	logentry( "Authentication failed for role '$loginrole'" );
 }
 
-if( count( $_POST )>0 ) {
+if( count( $_POST )>0 && !is_null( $role ) ) {
 	$get_array = array( );
 	foreach( $_GET as $name=>$value )
 		$get_array[ ]= $name."=".urlencode( $value );

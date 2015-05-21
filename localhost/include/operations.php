@@ -30,6 +30,8 @@ Prerequesite: Profile with id $currentprofile exists in profiles. The flow of pr
 11 If requested, query all hosts for their current running state
 12 If requested, delete a specific profile
 
+POST entries which are prefixed by "api" are intended for API use only.
+
 */
 
 define( "SINGLE_SETTINGS",1 );
@@ -133,8 +135,10 @@ require_once( "copyprofile.php" );
 $passedcount = isset( $_REQUEST[ "hostcount" ] )?(int)( $_REQUEST[ "hostcount" ] ):0;
 
 /* SECTION 1, Load profile. Everyone can do that. */
-if( isset( $_POST[ "load_profile" ] )&& isset( $_POST[ "scenario" ] )&& $_POST[ "scenario" ]!="" )
+if( isset( $_POST[ "load_profile" ] )&& isset( $_POST[ "scenario" ] )&& $_POST[ "scenario" ]!="" ) {
 	copy_profile( 0,true,$_POST[ "scenario" ],false );
+	$_GET[ "scenario" ]=$_POST[ "scenario" ];
+}
 
 /* SECTION 3, Create new host. Everyone can do that. */
 if( isset( $_POST[ "new" ],$_POST[ "new_mac" ],$_POST[ "new_name" ],$_POST[ "new_subnet" ] ) ) {
@@ -246,10 +250,10 @@ while( $row = pg_fetch_array( $state ) ) {
 		}
 	}
 
-/* SECTION 4, Detect whether we will use the host in a single view */
-	if( $unit->rights<RIGHTS_APPLY || isset( $_POST[ "keepall" ] ) )
+	if( isset( $_POST[ "api_keep" ] ) )
 		$unit->keep = true;
 
+/* SECTION 4, Detect whether we will use the host in a single view */
 	if( !is_null( $prefix ) ) {
 		if( isset( $_REQUEST[ "{$prefix}_settings" ] )&& !isset( $_POST[ "settingscancel" ] )&& !isset( $_POST[ "settingsokay" ] ) ) {
 			$_GET[ "mode_0_settings" ]= 1;
@@ -275,6 +279,9 @@ while( $row = pg_fetch_array( $state ) ) {
 		if( $unit->rights>=RIGHTS_APPLY && isset( $_POST[ $prefix ] )&& !isset( $_POST[ "load_profile" ] ) )
 			$unit->keep = $_POST[ $prefix ]=="keep";
 	}
+
+	if( $unit->rights<RIGHTS_APPLY || isset( $_POST[ "keepall" ] ) )
+		$unit->keep = true;
 	
 	$keep = $unit->keep?"TRUE":"FALSE";
 

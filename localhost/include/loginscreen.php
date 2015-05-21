@@ -2,20 +2,22 @@
 	<p id="buttonscenter">
 <?php
 	
-	foreach( $_POST as $var=>$val ) {
+	if( !isset( $_POST[ "logout" ] ) ) {
+		foreach( $_POST as $var=>$val ) {
 
 ?>
 		<input type="hidden" name="<?php echo htmlentities( $var ); ?>" value="<?php echo htmlentities( $val ); ?>" />
 <?php
-	
-	}
+		
+		}
 
-	if( isset( $_GET[ "refresh" ] ) ) {
+		if( isset( $_GET[ "refresh" ] ) ) {
 
 ?>
 		<input type="hidden" name="refresh" value="1" />
 <?php
 
+		}
 	}
 
 ?>

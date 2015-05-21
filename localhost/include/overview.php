@@ -6,7 +6,7 @@
 			</select>
 			<input type="submit" name="load_profile" value="Laden" />
 		</p><p id="buttonstopright">
-			<input type="text" name="profile_name" value="<?php echo isset( $_POST[ "scenario" ] )?htmlentities( $_POST[ "scenario" ] ):""; ?>" />
+			<input type="text" name="profile_name" value="<?php echo isset( $_GET[ "scenario" ] )?htmlentities( $_GET[ "scenario" ] ):""; ?>" />
 			<input type="submit" name="save_profile" value="Speichern" />
 			<input type="submit" name="delete_profile" value="Löschen" />
 		</p>

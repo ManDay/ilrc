@@ -135,10 +135,14 @@ if( count( $_POST )>0 && !is_null( $role ) ) {
 		$get_array[ ]= $name."=".urlencode( $value );
 
 	$_SESSION[ "messages" ]= $messages;
-	if( count( $get_array )>0 ) {
+
+	if( isset( $_POST[ "api_redirect" ] ) ) {
+		header( "Location: {$_POST[ "api_redirect" ]}" );
+	} elseif( count( $get_array )>0 ) {
 		header( "Location: http://{$_SERVER[ "SERVER_NAME" ]}?".implode( "&",$get_array ) );
-	} else
+	} else {
 		header( "Location: http://{$_SERVER[ "SERVER_NAME" ]}" );
+	}
 } else {
 	require( "include/display.php" );
 }

@@ -12,8 +12,10 @@ $windows_profiles = array(
 function windows_start( $settings_array,$unit,$timestamp ) {
 	global $windows_profiles;
 	makestateful( );
+	if( !isset( $settings_array[ "HYDRA" ] ) )
+		cqappend( "##",$unit->name );
 
-	rcboot( $unit->mac,$unit->subnet );
+	rcboot( $unit );
 	mounttools( $unit->name );
 
 	$baseid = (int)( $settings_array[ "base" ] );

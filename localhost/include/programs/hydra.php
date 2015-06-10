@@ -19,6 +19,7 @@ function hydra_start( $settings_array,$unit,$timestamp ) {
 	global $programs;
 
 	makestateful( );
+	cqappend( "##",$unit->name );
 
 	for( $i = 0; $i<HYDRA_COUNT; $i++ ) {
 		if( !is_null( $settings_array[ "program_$i" ] ) ) {
@@ -26,6 +27,7 @@ function hydra_start( $settings_array,$unit,$timestamp ) {
 
 			$guestsettings = pg_fetch_assoc( pg_query( "SELECT * FROM settings_$progident WHERE id={$settings_array[ "settings_$i" ]};" ) );
 			unset( $guestsettings[ "id" ] );
+			$guestsettings[ "HYDRA" ]= true;
 
 			$startcall = "{$progident}_start";
 			$startcall( $guestsettings,$unit,$timestamp );
@@ -68,6 +70,7 @@ function hydra_stop( $settings_array,$unit,$timestamp ) {
 
 			$guestsettings = pg_fetch_assoc( pg_query( "SELECT * FROM settings_$progident WHERE id={$settings_array[ "settings_$i" ]};" ) );
 			unset( $guestsettings[ "id" ] );
+			$guestsettings[ "HYDRA" ]= true;
 
 			$stopcall = "{$progident}_stop";
 			$stopcall( $guestsettings,$unit,$timestamp );

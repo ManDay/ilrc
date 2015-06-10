@@ -9,8 +9,10 @@ $website_table = array(
 
 function website_start( $settings_array,$unit,$timestamp ) {
 	makestateful( );
+	if( !isset( $settings_array[ "HYDRA" ] ) )
+		cqappend( "##",$unit->name );
 
-	rcboot( $unit->mac,$unit->subnet );
+	rcboot( $unit );
 	mounttools( $unit->name );
 
 	cqappend( "stop website_{$settings_array[ "monitor" ]}",$unit->name );

@@ -19,10 +19,11 @@ $present_applications = array(
 
 function present_start( $settings_array,$unit,$timestamp ) {
 	global $present_applications;
-
 	makestateful( );
+	if( !isset( $settings_array[ "HYDRA" ] ) )
+		cqappend( "##",$unit->name );
 
-	rcboot( $unit->mac,$unit->subnet );
+	rcboot( $unit );
 	mounttools( $unit->name );
 
 	$fullscreen = $settings_array[ "fullscreen" ]=="t"?1:0;

@@ -14,9 +14,9 @@ function cqinject( $command,$name ) {
 	exec( "./cqinject.bsh ".escapeshellarg( $name )." ".escapeshellarg( $command )." &>/dev/null &" );
 }
 
-function rcboot( $mac,$subnet ) {
-	$ip_ip = strstr( $subnet,"/",true );
-	$netmask = (int)( substr( strstr( $subnet,"/" ),1 ) );
+function rcboot( $host ) {
+	$ip_ip = strstr( $host->subnet,"/",true );
+	$netmask = (int)( substr( strstr( $host->subnet,"/" ),1 ) );
 	$ipmask = 32-$netmask;
 
 	$iplong = ip2long( $ip_ip );
@@ -24,9 +24,14 @@ function rcboot( $mac,$subnet ) {
 	for( $i = 0; $i<$ipmask; $i++ )
 		$ones =( $ones<<1 )|1;
 
-	$macbin = pack( "H12",str_replace( ":","",$mac ) );
-
 	$broadcast = long2ip( $iplong|$ones );
+	file_put_contents( "bootsequences/{$host->name}","#./wakeup.bsh {$host->mac} {$broadcast} {$host->name}\n",FILE_APPEND );
+
+	register_up( );
+
+	return;
+
+	$macbin = pack( "H12",str_replace( ":","",$mac ) );
 	$packet = str_repeat( chr( 0xff ),6 ).str_repeat( $macbin,16 );
 
 	if( $sock = socket_create( AF_INET,SOCK_DGRAM,SOL_UDP ) ) {
@@ -37,8 +42,6 @@ function rcboot( $mac,$subnet ) {
 		// To limit network throughput for sensitive networks
 		usleep( 100 );
 	}
-
-	register_up( );
 }
 
 function mounttools( $name ) {

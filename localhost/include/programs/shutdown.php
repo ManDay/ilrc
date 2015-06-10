@@ -6,6 +6,9 @@ $shutdown_table = array(
 
 function shutdown_start( $settings_array,$unit,$timestamp ) {
 	makestateful( );
+	if( !isset( $settings_array[ "HYDRA" ] ) )
+		cqappend( "##",$unit->name );
+
 	$force = $settings_array[ "force" ]=='t';
 
 	if( isreachable( $unit ) ) {

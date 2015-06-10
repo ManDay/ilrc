@@ -74,25 +74,78 @@ echo "Aquired PID Lock"
 
 TMP_FILE=$(mktemp)
 
-while mv "$QUEUE_FILE" "$TMP_FILE" 2>/dev/null
-do
-	echo "Queue fetched"
-	while read -r LINE
-	do
-		echo "Read line '$LINE'"
-		if [[ "$LINE" == '#'* ]]
-		then
-			LINE=${LINE#'#'}
-			MAX_TRIALS=1
-		else
-			MAX_TRIALS="${MAXIMUM_TRIALS}"
-		fi
+block=""
+loop=1
 
-		AGAIN=1
-		TRIALS=0
+while true
+do
+	if mv "$QUEUE_FILE" "$TMP_FILE" 2>/dev/null
+	then
+		echo "Queue fetched"
+		block=$(echo -n "$block" | cat - "$TMP_FILE")
+
+		echo "Shortcutting sections"
+
+		begin=""
+		end=""
+		cutting=0
+
+		while read -r rawline
+		do
+			if [[ "$rawline" == "##" ]]
+			then
+				end=""
+				cutting=1
+			else
+				line="$rawline"$'\n'
+				if (( cutting ))
+				then
+					end="$end$line"
+				else
+					begin="$begin$line"
+				fi
+			fi
+		done < <(echo "$block")
+
+		block="$begin$end"
+		if [[ "$block" != "" ]]
+		then
+			block="${block:0:-1}"
+		fi
+	fi
+
+	if [[ "$block" == "" ]]
+	then
+		break
+	fi
+	
+	LINE="$(echo "$block" | head -n 1)"
+	block="$(echo "$block" | tail -n +2)"
+
+	TRIALS=0
+	MAX_TRIALS="${MAXIMUM_TRIALS}"
+	AGAIN=1
+
+	if [[ "$LINE" == '#'* ]]
+	then
+		LINE=${LINE#'#'}
+
 		while (( AGAIN && TRIALS < MAX_TRIALS ))
 		do
-			echo "Trying to dispatch '$LINE'"
+			echo "EXEC '$LINE'"
+			$LINE
+
+			AGAIN=$(( $? != 0 ))
+			if (( $AGAIN ))
+			then
+				sleep 2
+				TRIALS=$(( TRIALS + 1 ))
+			fi
+		done
+	else
+		while (( AGAIN && TRIALS < MAX_TRIALS ))
+		do
+			echo "DISPATCH '$LINE'"
 			# Redirect from /dev/null so ssh doesn't eat our stdin!
 			./ssh.bsh "$TARGET" "$LINE" < /dev/null
 
@@ -103,7 +156,7 @@ do
 				TRIALS=$(( TRIALS + 1 ))
 			fi
 		done
-	done < "$TMP_FILE"
+	fi
 done
 
 rm "$TMP_FILE"

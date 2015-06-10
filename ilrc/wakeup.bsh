@@ -1,0 +1,16 @@
+#!/bin/bash
+
+# Usage <Address> <Subnet> <Name>
+
+addr=$(echo "$1" | sed "s/://g")
+ip="$2"
+name="$3"
+package="FFFFFFFFFFFF"
+for (( i=0; i<16; i++ ))
+do
+	package="$package$addr"
+done
+
+echo "$package" | xxd -r -p | nc -u -b -w 1 -p 7000 "$ip" 7000
+
+./alive_check.bsh "$3"

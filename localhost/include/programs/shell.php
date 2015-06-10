@@ -11,8 +11,10 @@ $shell_table = array(
 function shell_start( $settings_array,$unit,$timestamp ) {
 	if( $settings_array[ "stateful" ]=="t" )
 		makestateful( );
+	if( !isset( $settings_array[ "HYDRA" ] ) )
+		cqappend( "##",$unit->name );
 
-	rcboot( $unit->mac,$unit->subnet );
+	rcboot( $unit );
 	mounttools( $unit->name );
 
 	$command = "shell ".escapeshellarg( str_replace( array( "\n","\r" ),array( ";" ),$settings_array[ "startcode" ] ) );

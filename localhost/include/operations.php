@@ -378,8 +378,8 @@ while( $row = pg_fetch_array( $state ) ) {
 				$query .= "DELETE FROM settings_{$programs[ $row[ "program" ] ]->ident} WHERE	id={$row[ "settings" ]};";
 
 			$settings_result = pg_query( "SELECT program,settings FROM units WHERE id={$unit->id};" );
-			$row = pg_fetch_row( $settings_result );
-			if( !is_null( $row[ 0 ] ) )
+			$row = pg_fetch_assoc( $settings_result );
+			if( !is_null( $row[ "program" ] ) )
 				$query .= "DELETE FROM settings_{$programs[ $row[ "program" ] ]->ident} WHERE	id={$row[ "settings" ]};";
 
 			$query .= "DELETE FROM units WHERE id={$unit->id};";

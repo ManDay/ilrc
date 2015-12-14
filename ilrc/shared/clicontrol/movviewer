@@ -14,7 +14,8 @@
 MONITOR="$2"
 FILE="$1"
 
-dconf write /org/gnome/Totem/repeat true
+gsettings set org.gnome.totem repeat true
+gsettings set org.gnome.totem autoload-subtitles true
 
 totem "$FILE" &
 PID=$!

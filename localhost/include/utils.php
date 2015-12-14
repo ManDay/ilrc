@@ -25,7 +25,7 @@ function rcboot( $host ) {
 		$ones =( $ones<<1 )|1;
 
 	$broadcast = long2ip( $iplong|$ones );
-	file_put_contents( "bootsequences/{$host->name}","#./wakeup.bsh {$host->mac} {$broadcast} {$host->name}\n",FILE_APPEND );
+	cqappend( "#./wakeup.bsh {$host->mac} {$broadcast} {$host->name}",$host->name );
 
 	register_up( );
 

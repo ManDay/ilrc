@@ -1,6 +1,11 @@
 #!/bin/bash
 
-TARGET="$1"
+if [[ "$1" == "--kill" ]]
+then
+	TARGET="$2"
+else
+	TARGET="$1"
+fi
 
 ## DISPATCHER
 #
@@ -38,10 +43,11 @@ MAXIMUM_TRIALS=50
 # process with the filed PID was found running, we will not keep
 # relooping because of an orphaned PID file
 
+
 while [[ -f $PID_FILE && "$(cat $PID_FILE)" != $PID ]]
 do
 	echo "Found PID file, not yet found to be orphaned"
-	PID=$(cat $PID_FILE)
+	PID=$(cat "$PID_FILE")
 
 	# Check again one second later, because the running dispatcher might already
 	# have decided to terminate before the queue was written.
@@ -49,8 +55,13 @@ do
 
 	if ps -p $PID > /dev/null
 	then
-		echo "Referenced PID still active, quit"
-		exit 1
+		echo "Referenced PID still active"
+		if [[ "$1" == "--kill" ]]
+		then
+			kill $(cat "$PID_FILE")
+		else
+			exit 1
+		fi
 	fi
 done
 
@@ -76,6 +87,8 @@ TMP_FILE=$(mktemp)
 
 block=""
 loop=1
+
+trap 'echo "$LINE" > bootsequences/current_$TARGET ; echo "$block" >> bootsequences/current_$TARGET' USR1
 
 while true
 do

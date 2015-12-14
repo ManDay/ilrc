@@ -29,7 +29,13 @@ done
 
 while read -r -d $'\0' VARPAIR
 do
-	export "$VARPAIR"
+	varname="${VARPAIR%%=*}"
+	varval="${VARPAIR#*=}"
+
+	if [[ "$varval" != '()'* ]]
+	then
+		export "$VARPAIR"
+	fi
 done <"/proc/$GNOME_SESSION_PID/environ"
 
 export PATH="$PATH:/home/shared/clicontrol"
